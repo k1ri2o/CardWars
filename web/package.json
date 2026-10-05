@@ -1,0 +1,14 @@
+{
+  "name": "cardwars-web",
+  "private": true,
+  "type": "module",
+  "description": "Card Wars in the browser: 1v1 online, LAN, pass & play and practice",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "build-data": "node tools/build-data.mjs",
+    "start": "cd server && npm install --no-audit --no-fund && node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

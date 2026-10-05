@@ -1,0 +1,28 @@
+name: Web game tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/web.yml']
+  pull_request:
+    paths: ['web/**', '.github/workflows/web.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Engine, abilities, host protocol and bot-vs-bot matches
+        working-directory: web
+        run: npm test
+      - name: Card data matches Assets/
+        run: |
+          node web/tools/build-data.mjs
+          git diff --exit-code -- web/data web/assets

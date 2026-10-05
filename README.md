@@ -18,6 +18,13 @@ Think you've got what it takes to be crowned a Cool Guy, or will you end up drin
 
 It's CARD WARS! 
 
+## Play in the browser: 1v1 with a friend
+
+The `web/` folder has a browser version of the battle for two players:
+online by room code, on the same Wi-Fi without internet, or pass & play on
+one device. It uses the cards, heroes, decks and art from this project. See
+[web/README.md](web/README.md) for how to start it.
+
 ## Download
 
 * [Latest Windows Version](https://github.com/shishkabob27/CardWars/releases/latest/download/CardWars-Windows.zip)
