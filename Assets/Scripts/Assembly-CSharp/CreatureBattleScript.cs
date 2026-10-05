@@ -84,7 +84,14 @@ public class CreatureBattleScript : MonoBehaviour
 			}
 			CWBattleSequenceController instance = CWBattleSequenceController.GetInstance();
 			BattlePhaseManager instance2 = BattlePhaseManager.GetInstance();
-			if (instance.result == "Crit" && instance2.Phase == BattlePhase.P1Battle)
+			if (VersusMatch.Active)
+			{
+				if (VersusMatch.LaneCrit)
+				{
+					aTK = (int)((float)aTK * VersusMatch.LaneCritModifier);
+				}
+			}
+			else if (instance.result == "Crit" && instance2.Phase == BattlePhase.P1Battle)
 			{
 				aTK = (int)((float)aTK * instance.damageModifierCrit);
 			}
@@ -92,7 +99,12 @@ public class CreatureBattleScript : MonoBehaviour
 		}
 		else
 		{
-			GameInstance.DealDamage(!Player, creature.ATK - GameInstance.GetATKPenalty(Player), lane.Index);
+			int heroDamage = creature.ATK - GameInstance.GetATKPenalty(Player);
+			if (VersusMatch.Active && VersusMatch.LaneCrit)
+			{
+				heroDamage = (int)((float)heroDamage * VersusMatch.LaneCritModifier);
+			}
+			GameInstance.DealDamage(!Player, heroDamage, lane.Index);
 		}
 	}
 

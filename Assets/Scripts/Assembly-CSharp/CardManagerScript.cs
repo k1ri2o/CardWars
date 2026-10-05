@@ -118,6 +118,10 @@ public class CardManagerScript : MonoBehaviour
 		{
 			Initialize();
 		}
+		if (VersusMatch.Active)
+		{
+			return;
+		}
 		if (Input.GetKeyDown("a"))
 		{
 			DebugDrawCard(PlayerType.User);

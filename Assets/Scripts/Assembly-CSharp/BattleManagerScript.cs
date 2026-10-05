@@ -112,6 +112,7 @@ public class BattleManagerScript : MonoBehaviour
 		}
 		GameInstance.HitAreaModifier = 0f;
 		GameInstance.CritAreaModifier = 0f;
+		VersusMatch.ClearPeerDefenseAreas();
 	}
 
 	public void P2BattleFinished()
@@ -136,6 +137,7 @@ public class BattleManagerScript : MonoBehaviour
 		}
 		GameInstance.DefenseAreaModifier = 0f;
 		GameInstance.DefenseAreaCritModifier = 0f;
+		VersusMatch.ClearPeerAttackAreas();
 	}
 
 	public void CheckForDefeat()

@@ -23,7 +23,7 @@ public class ShuffleAndDraw : SpellScript
 			deck.AddCard(newCard);
 			hand.RemoveAt(0);
 		}
-		deck.Shuffle();
+		deck.Shuffle(base.Owner);
 		for (int i = 0; i < 5; i++)
 		{
 			base.GameInstance.DrawCard(base.Owner);

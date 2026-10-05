@@ -95,7 +95,7 @@ public class RandomCard : SpellScript
 				cWList.Add(item2);
 			}
 		}
-		CardItem item = cWList.RandomItem();
+		CardItem item = cWList.RandomItem(base.Owner);
 		TakeCard(item);
 		return true;
 	}

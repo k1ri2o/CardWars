@@ -63,7 +63,7 @@ public class RandomDiscardCard : CreatureScript
 	public override void Floop()
 	{
 		List<CardItem> discardPile = GameState.Instance.GetDiscardPile(base.Owner);
-		int index = Random.Range(0, discardPile.Count);
+		int index = VersusRandom.Range(base.Owner, 0, discardPile.Count);
 		CardItem item = discardPile[index];
 		TakeCard(item);
 	}

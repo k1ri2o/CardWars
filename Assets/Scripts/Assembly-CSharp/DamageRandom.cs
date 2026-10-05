@@ -53,7 +53,7 @@ public class DamageRandom : CreatureScript
 				cWList.Add(creature2);
 			}
 		}
-		TargetList.Add(cWList.RandomItem());
+		TargetList.Add(cWList.RandomItem(base.Owner));
 		DoEffect();
 	}
 

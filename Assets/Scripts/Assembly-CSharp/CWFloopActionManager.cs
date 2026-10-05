@@ -117,6 +117,14 @@ public class CWFloopActionManager : MonoBehaviour
 
 	public IEnumerator PlayFloopAction()
 	{
+		if (VersusMatch.Active && player == (int)PlayerType.User)
+		{
+			if (VersusMatch.Over || !GameInstance.LaneHasCreature(PlayerType.User, lane))
+			{
+				yield break;
+			}
+			VersusMatch.Send("floop", lane);
+		}
 		GameObject target = creatureMgr.Spawn_Points[player, lane, 0].gameObject;
 		FillFloopInfo();
 		FloopCameraTrigger(target, false);
@@ -137,11 +145,14 @@ public class CWFloopActionManager : MonoBehaviour
 
 	private IEnumerator DoWaitThenTrigger(float waitTime, Animation anim, string animName)
 	{
+		// Keep who and where: tapping a creature to look at it rewrites player and lane.
+		int floopPlayer = player;
+		int floopLane = lane;
 		PlayAnimOnce(anim, animName);
 		UICamera.useInputEnabler = true;
 		FloopFX();
 		yield return new WaitForSeconds(waitTime);
-		GameInstance.FloopCard(player, lane, CardType.Creature);
+		GameInstance.FloopCard(floopPlayer, floopLane, CardType.Creature);
 	}
 
 	private void FloopFX()
@@ -519,6 +530,15 @@ public class CWFloopActionManager : MonoBehaviour
 			}
 			float delayAfterAnim = ((!(num == string.Empty)) ? float.Parse(num) : 0f);
 			yield return new WaitForSeconds(delayAfterAnim);
+			while (VersusMatch.Active && VersusMatch.DeathsPending())
+			{
+				yield return null;
+			}
+			if (VersusMatch.Active && (sc.Data.Form.Type == CardType.Creature || sc.Data.Form.Type == CardType.Building) && sc.CurrentLane != null && sc.CurrentLane.Scripts[(int)sc.Data.Form.Type] != sc)
+			{
+				// The target left play while earlier deaths were settling.
+				continue;
+			}
 			resumeOnComplete = source.DoResult(sc) && resumeOnComplete;
 			yield return new WaitForSeconds(1f - waitTime - delayAfterAnim);
 		}
@@ -607,6 +627,15 @@ public class CWFloopActionManager : MonoBehaviour
 			string num = GetStringFromJson(source.Data.Form.ScriptVizName, "DelayAfterAnimation");
 			float delayAfterAnim = ((!(num == string.Empty)) ? float.Parse(num) : 0f);
 			yield return new WaitForSeconds(delayAfterAnim);
+			while (VersusMatch.Active && VersusMatch.DeathsPending())
+			{
+				yield return null;
+			}
+			if (VersusMatch.Active && (sc.Data.Form.Type == CardType.Creature || sc.Data.Form.Type == CardType.Building) && sc.CurrentLane != null && sc.CurrentLane.Scripts[(int)sc.Data.Form.Type] != sc)
+			{
+				// The target left play while earlier deaths were settling.
+				continue;
+			}
 			resumeOnComplete = source.DoResult(sc) && resumeOnComplete;
 			yield return new WaitForSeconds(1f - waitTime - delayAfterAnim);
 		}

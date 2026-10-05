@@ -60,7 +60,7 @@ public class DamageTargetHealSelf : CreatureScript
 	{
 		if (base.GameInstance.HasCreaturesInPlay(!base.Owner))
 		{
-			if (base.Owner == PlayerType.User)
+			if (VersusMatch.IsHumanControlled(base.Owner))
 			{
 				StartTargetSelection(!base.Owner, SelectionType.Creature, KFFLocalization.Get("!!TAP_CREATURE_TO_ATTACK"));
 				return;

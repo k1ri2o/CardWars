@@ -58,7 +58,7 @@ public class ReturnTargetToHand : CreatureScript
 
 	public override void Floop()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(!base.Owner, (SelectionType)base.Data.Form.BaseVal1, KFFLocalization.Get("!!PICK_A_TARGET"));
 			return;

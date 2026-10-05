@@ -2,7 +2,7 @@ public class IncreaseDefenseArea : CreatureScript
 {
 	public override bool CanFloop()
 	{
-		return (int)GameState.Instance.DefenseAreaModifier == 0;
+		return (int)VersusMatch.GetAreaMod(base.Owner, VersusMatch.AreaDefense) == 0;
 	}
 
 	public override int EvaluateAbility()
@@ -18,7 +18,7 @@ public class IncreaseDefenseArea : CreatureScript
 
 	public override bool DoResult(CardScript target)
 	{
-		base.GameInstance.DefenseAreaModifier = (float)base.Data.Val1 / 100f;
+		VersusMatch.SetAreaMod(base.Owner, VersusMatch.AreaDefense, (float)base.Data.Val1 / 100f);
 		return true;
 	}
 }

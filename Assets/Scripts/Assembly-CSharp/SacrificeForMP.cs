@@ -9,7 +9,7 @@ public class SacrificeForMP : CreatureScript
 		{
 			return false;
 		}
-		if (base.Owner == PlayerType.Opponent && flag)
+		if (VersusMatch.IsAI(base.Owner) && flag)
 		{
 			int baseVal = base.Data.Form.BaseVal1;
 			GameState.Instance.AddMagicPoints(base.Owner, baseVal);

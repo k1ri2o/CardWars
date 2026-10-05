@@ -2,7 +2,7 @@ public class IncreaseHitArea : CreatureScript
 {
 	public override bool CanFloop()
 	{
-		return (int)GameState.Instance.HitAreaModifier == 0;
+		return (int)VersusMatch.GetAreaMod(base.Owner, VersusMatch.AreaHit) == 0;
 	}
 
 	public override int EvaluateAbility()
@@ -18,7 +18,7 @@ public class IncreaseHitArea : CreatureScript
 
 	public override bool DoResult(CardScript target)
 	{
-		base.GameInstance.HitAreaModifier = (float)base.Data.Val1 / 100f;
+		VersusMatch.SetAreaMod(base.Owner, VersusMatch.AreaHit, (float)base.Data.Val1 / 100f);
 		return true;
 	}
 }

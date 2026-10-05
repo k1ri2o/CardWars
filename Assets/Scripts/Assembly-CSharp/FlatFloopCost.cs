@@ -11,7 +11,7 @@ public class FlatFloopCost : SpellScript
 			return false;
 		}
 		bool flag = CardScript.CanPlay(player, lane, card);
-		if (flag && player == PlayerType.Opponent && flag)
+		if (flag && VersusMatch.IsAI(player) && flag)
 		{
 			GameState.Instance.SetFlatFloopCost(player, card.BaseVal1);
 			Locked = true;

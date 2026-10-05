@@ -3,7 +3,7 @@ public class GainActionPointsLeader : LeaderScript
 	public new static bool CanPlay(PlayerType player, int lane, CardForm card)
 	{
 		bool flag = LeaderScript.CanPlay(player, lane, card);
-		if (player == PlayerType.Opponent && flag)
+		if (VersusMatch.IsAI(player) && flag)
 		{
 			LeaderForm form = GameState.Instance.GetLeader(player).Form;
 			int baseVal = form.BaseVal1;

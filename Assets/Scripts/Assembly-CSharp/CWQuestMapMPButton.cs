@@ -38,6 +38,15 @@ public class CWQuestMapMPButton : AsyncData<MultiplayerData>
 
 	private void OnClick()
 	{
+		if ((!(mainMenuCamera != null) || (mainMenuCamera.gameObject.activeInHierarchy && mainMenuCamera.enabled)) && (!(AnimationScripts != null) || !AnimationScripts.IsPlayingStartAnimRevert()))
+		{
+			// "Play a Friend" first; the original online ladder stays one button away.
+			VersusSession.OpenLobby(OpenDeckWarsLadder);
+		}
+	}
+
+	private void OpenDeckWarsLadder()
+	{
 		if ((!(mainMenuCamera != null) || (mainMenuCamera.gameObject.activeInHierarchy && mainMenuCamera.enabled)) && (!(AnimationScripts != null) || !AnimationScripts.IsPlayingStartAnimRevert()) && Asyncdata.processed && SessionManager.GetInstance().IsReady())
 		{
 			if ((bool)LoadingActivityShow)

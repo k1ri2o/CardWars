@@ -15,6 +15,17 @@ public class SurrenderMenu : AsyncData<string>
 
 	private void SurrenderMenuYes()
 	{
+		if (VersusMatch.Active)
+		{
+			if (!VersusMatch.Over)
+			{
+				VersusMatch.LocalSurrendered = true;
+				VersusMatch.Over = true;
+				VersusMatch.Send("surrender");
+			}
+			SurrenderMenuDone();
+			return;
+		}
 		if (GlobalFlags.Instance.InMPMode && Asyncdata.processed)
 		{
 			global::Multiplayer.Multiplayer.MatchFinish(SessionManager.GetInstance().theSession, CWMPMapController.GetInstance().mLastMPData.mMatchID, true, StringCallback);

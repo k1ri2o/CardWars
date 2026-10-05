@@ -236,6 +236,19 @@ public class Deck
 		}
 	}
 
+	// Shuffle with the owner's random stream, so a 1v1 match shuffles the same on both computers.
+	public void Shuffle(PlayerType owner)
+	{
+		for (int num = Cards.Count * 7; num > 0; num--)
+		{
+			int index = VersusRandom.Range(owner, 0, Cards.Count);
+			int index2 = VersusRandom.Range(owner, 0, Cards.Count);
+			CardItem value = Cards[index];
+			Cards[index] = Cards[index2];
+			Cards[index2] = value;
+		}
+	}
+
 	public void ShuffleLandscapes()
 	{
 		for (int num = LandscapeCount * 7; num > 0; num--)

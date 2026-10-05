@@ -11,7 +11,7 @@ public class DiscardForPoints : SpellScript
 			return false;
 		}
 		bool flag = CardScript.CanPlay(player, lane, card);
-		if (flag && player == PlayerType.Opponent && flag)
+		if (flag && VersusMatch.IsAI(player) && flag)
 		{
 			GameState.Instance.AddMagicPoints(player, card.BaseVal1);
 			Locked = true;

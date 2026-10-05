@@ -17,6 +17,14 @@ public class CWTriggerLeaderAbility : MonoBehaviour
 	{
 		if (!Used)
 		{
+			if (VersusMatch.Active)
+			{
+				if (!VersusMatch.LocalInputAllowed())
+				{
+					return;
+				}
+				VersusMatch.Send("leader");
+			}
 			BattlePhaseManager.GetInstance().Phase = BattlePhase.P1LeaderAbility;
 			Used = true;
 			CWFloopActionManager.GetInstance().TriggerLeader(PlayerType.User);

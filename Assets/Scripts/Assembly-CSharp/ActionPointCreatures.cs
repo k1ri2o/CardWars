@@ -16,7 +16,7 @@ public class ActionPointCreatures : SpellScript
 			{
 				flag = false;
 			}
-			if (player == PlayerType.Opponent && flag)
+			if (VersusMatch.IsAI(player) && flag)
 			{
 				GameState.Instance.AddMagicPoints(player, num);
 				Locked = true;

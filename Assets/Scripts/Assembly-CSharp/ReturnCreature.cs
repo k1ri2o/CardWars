@@ -63,7 +63,7 @@ public class ReturnCreature : SpellScript
 
 	public override void Cast()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(base.Owner, SelectionType.Creature, "Pick a creature.");
 			return;

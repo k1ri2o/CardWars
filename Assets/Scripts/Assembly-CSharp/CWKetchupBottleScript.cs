@@ -120,7 +120,17 @@ public class CWKetchupBottleScript : MonoBehaviour
 		GetComponent<Rigidbody>().angularVelocity = new Vector3(GetComponent<Rigidbody>().angularVelocity.x, 150f + UnityEngine.Random.value * 50f * (float)((!(UnityEngine.Random.value > 0.5f)) ? 1 : (-1)), GetComponent<Rigidbody>().angularVelocity.z);
 		Spin = true;
 		base.gameObject.SendMessage("OnClick", SendMessageOptions.DontRequireReceiver);
-		savedForceStartingPlayer = forceStartingPlayer;
+		savedForceStartingPlayer = ForcedStartingPlayer();
+	}
+
+	private static DebugFlagsScript.ForceStartingPlayer ForcedStartingPlayer()
+	{
+		if (VersusMatch.Active)
+		{
+			// The host already decided who starts; the bottle lands on that player on both screens.
+			return (VersusMatch.FirstSeat != VersusMatch.MySeat) ? DebugFlagsScript.ForceStartingPlayer.Them : DebugFlagsScript.ForceStartingPlayer.Me;
+		}
+		return forceStartingPlayer;
 	}
 
 	private bool DeterminePlayer(float angle)
@@ -393,7 +403,7 @@ public class CWKetchupBottleScript : MonoBehaviour
 			{
 				Spin = true;
 				base.gameObject.SendMessage("OnClick", SendMessageOptions.DontRequireReceiver);
-				savedForceStartingPlayer = forceStartingPlayer;
+				savedForceStartingPlayer = ForcedStartingPlayer();
 			}
 		}
 	}

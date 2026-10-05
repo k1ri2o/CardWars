@@ -15,7 +15,7 @@ public class BlockTargetFloop : SpellScript
 				if (item.HasCreature())
 				{
 					CreatureScript creature = item.GetCreature();
-					if (!creature.FloopBlocked && (player == PlayerType.User || creature.CanFloop()))
+					if (!creature.FloopBlocked && (VersusMatch.IsHumanControlled(player) || creature.CanFloop()))
 					{
 						return true;
 					}
@@ -109,7 +109,7 @@ public class BlockTargetFloop : SpellScript
 
 	public override void Cast()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(!base.Owner, SelectionType.Creature, KFFLocalization.Get("!!PICK_A_CREATURE"));
 			return;

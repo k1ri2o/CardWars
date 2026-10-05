@@ -7,6 +7,11 @@ public class CWOpponentSequenceTrigger : MonoBehaviour
 	private void OnClick()
 	{
 		oppActionSqcr = CWOpponentActionSequencer.GetInstance();
+		if (VersusMatch.Active)
+		{
+			StartCoroutine(oppActionSqcr.VersusTurn());
+			return;
+		}
 		StartCoroutine(oppActionSqcr.StartOpponentSequence());
 	}
 
