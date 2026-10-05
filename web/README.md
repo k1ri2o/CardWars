@@ -34,8 +34,9 @@ The workflow in `.github/workflows/pages.yml` publishes this folder to
 GitHub Pages on every push to `main` that touches `web/`. It needs Pages
 switched on once: **Settings → Pages → Build and deployment → Source:
 GitHub Actions**. The game is then at `https://<owner>.github.io/<repo>/`.
-
-Any static web host works the same way; the folder has no build step.
+GitHub only offers Pages for private repositories on paid plans; for a
+private repository on a free plan, use the local server below or upload this
+folder to any static web host. The folder has no build step.
 
 ### On your own computer (LAN play, also works online)
 
