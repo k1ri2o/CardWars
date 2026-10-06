@@ -274,7 +274,9 @@ public class CreatureManagerScript : MonoBehaviour
 		if (PlayerID == PlayerType.User)
 		{
 			BattlePhaseManager instance = BattlePhaseManager.GetInstance();
-			if (instance.Phase != BattlePhase.P1SetupActionRareCard)
+			// In a 1v1 match the friend's spell can move the local player's card during the
+			// friend's turn; that mustn't hand the turn to the local player.
+			if (instance.Phase != BattlePhase.P1SetupActionRareCard && (!VersusMatch.Active || VersusMatch.IsMyTurn()))
 			{
 				BattlePhaseManager.GetInstance().Phase = BattlePhase.P1Setup;
 			}

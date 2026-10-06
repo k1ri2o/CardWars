@@ -563,9 +563,21 @@ public static class VersusMatch
 		}
 	}
 
+	// Turn 1 belongs to the player who goes first, turn 2 to the other, and so on.
+	public static bool IsMyTurn()
+	{
+		GameDataScript gameData = GameDataScript.GetInstance();
+		if (gameData == null)
+		{
+			return false;
+		}
+		bool firstPlayersTurn = gameData.Turn % 2 == 1;
+		return firstPlayersTurn == (FirstSeat == MySeat);
+	}
+
 	private static bool LocalCalmNow()
 	{
-		if (!Active || Over)
+		if (!Active || Over || !IsMyTurn())
 		{
 			return false;
 		}
