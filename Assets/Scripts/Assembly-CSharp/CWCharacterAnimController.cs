@@ -278,7 +278,7 @@ public class CWCharacterAnimController : MonoBehaviour
 
 	public void DoEffectPlayCardSpell(PlayerType player, int lane, CardItem card)
 	{
-		StartCoroutine(JustWaitSpell(2f, player, lane, card));
+		StartCoroutine(VersusMatch.Track(player, JustWaitSpell(2f, player, lane, card)));
 	}
 
 	private IEnumerator JustWaitSpell(float waitTime, PlayerType player, int lane, CardItem card)
@@ -289,7 +289,7 @@ public class CWCharacterAnimController : MonoBehaviour
 
 	public void DoEffectPlayCard(PlayerType player, int lane, CardItem card)
 	{
-		StartCoroutine(JustWait(2f, player, lane, card));
+		StartCoroutine(VersusMatch.Track(player, JustWait(2f, player, lane, card)));
 	}
 
 	private IEnumerator JustWait(float waitTime, PlayerType player, int lane, CardItem card)

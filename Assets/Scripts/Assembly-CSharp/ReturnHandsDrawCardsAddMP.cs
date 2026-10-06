@@ -41,7 +41,7 @@ public class ReturnHandsDrawCardsAddMP : CreatureScript
 			deck.AddCard(newCard);
 			hand.RemoveAt(0);
 		}
-		deck.Shuffle();
+		deck.Shuffle(base.Owner);
 		for (int i = 0; i < base.Data.Form.BaseVal1; i++)
 		{
 			base.GameInstance.DrawCard(base.Owner);

@@ -14,6 +14,30 @@ public class PVPInfoHUD : MonoBehaviour
 
 	private void OnEnable()
 	{
+		if (VersusMatch.Active)
+		{
+			if ((bool)ParentObject)
+			{
+				ParentObject.SetActive(true);
+			}
+			if ((bool)PVPPlayerName)
+			{
+				PVPPlayerName.text = VersusMatch.MyName;
+			}
+			if ((bool)PVPOpponentName)
+			{
+				PVPOpponentName.text = VersusMatch.PeerName;
+			}
+			if ((bool)PVPTrophyWin)
+			{
+				PVPTrophyWin.text = string.Empty;
+			}
+			if ((bool)PVPTrophyLoss)
+			{
+				PVPTrophyLoss.text = string.Empty;
+			}
+			return;
+		}
 		if (GlobalFlags.Instance.InMPMode)
 		{
 			if ((bool)ParentObject)

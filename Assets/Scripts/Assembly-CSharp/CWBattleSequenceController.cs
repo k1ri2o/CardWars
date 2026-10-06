@@ -149,6 +149,22 @@ public class CWBattleSequenceController : MonoBehaviour
 
 	public int roundLimit = 1000000;
 
+	// 1v1 match: how many spins the ring waits for a tap before counting a miss.
+	private const int VersusRingRounds = 8;
+
+	// How long a reachable friend may take to send their ring tap before the lane is fought
+	// without it (their ring times out by itself within seconds, so this only catches a stuck game).
+	private const float VersusRingWaitSeconds = 180f;
+
+	// How long to wait for a ring tap the friend's game has evidently skipped (it is already past this lane).
+	private const float VersusRingSkippedSeconds = 5f;
+
+	private bool versusRingOnly;
+
+	private bool versusCounterView;
+
+	private bool versusSkipSequence;
+
 	public float realTime
 	{
 		get
@@ -243,7 +259,7 @@ public class CWBattleSequenceController : MonoBehaviour
 				{
 					yield return null;
 				}
-				lane = ((phaseMgr.Phase != BattlePhase.P1Battle) ? (3 - j) : j);
+				lane = ((phaseMgr.Phase != BattlePhase.P1Battle && !VersusMatch.Active) ? (3 - j) : j);
 				if (prevPerfEvent != 0)
 				{
 					PerfThrottleManager.HandlePerfThrottleEvent(prevPerfEvent, false);
@@ -253,6 +269,12 @@ public class CWBattleSequenceController : MonoBehaviour
 				prevPerfEvent = perfEvent;
 				if (!GameInstance.LaneHasCreature(player, lane))
 				{
+					continue;
+				}
+				if (VersusMatch.Active)
+				{
+					// Both computers fight the attacker's lanes left to right, with both players' rings.
+					yield return StartCoroutine(VersusLane());
 					continue;
 				}
 				undefendedFlag = false;
@@ -298,6 +320,120 @@ public class CWBattleSequenceController : MonoBehaviour
 		yield return StartCoroutine(BattleEnd(false));
 	}
 
+	private IEnumerator VersusLane()
+	{
+		while (VersusMatch.DeathsPending() && !VersusMatch.Over)
+		{
+			yield return null;
+		}
+		if (VersusMatch.Over || GameInstance.GetHealth(PlayerType.User) <= 0 || GameInstance.GetHealth(PlayerType.Opponent) <= 0 || !GameInstance.LaneHasCreature(player, lane))
+		{
+			yield break;
+		}
+		CreatureScript attacker = GameInstance.GetCreature(player, lane);
+		int oppositeIndex = attacker.CurrentLane.OpponentLane.Index;
+		bool defended = GameInstance.LaneHasCreature(!player, oppositeIndex);
+		bool noAttack = attacker.ATK == 0;
+		bool iAttack = player == PlayerType.User;
+		bool myRing = !noAttack && (iAttack || defended);
+		bool peerRing = !noAttack && (!iAttack || defended);
+		int turn = GameDataScript.GetInstance().Turn;
+		string mine = null;
+		string theirs = null;
+		forceCrit = false;
+		undefendedFlag = !defended && !iAttack && !noAttack;
+		noAttackFlag = noAttack;
+		forceMiss = !myRing;
+		int savedRoundLimit = roundLimit;
+		if (myRing && PlayerInfoScript.GetInstance().AutoBattleSetting)
+		{
+			mine = (!iAttack) ? "Miss" : "Hit";
+			UpdateBattleCamera();
+		}
+		else
+		{
+			// The ring shows the local player's tap, or "undefended" / "no attack" when they have none.
+			roundLimit = VersusRingRounds;
+			versusRingOnly = true;
+			ringStartTweenTarget.SendMessage("OnClick", SendMessageOptions.DontRequireReceiver);
+			_keyPressed = false;
+			yield return StartCoroutine(RingStart());
+			versusRingOnly = false;
+			roundLimit = savedRoundLimit;
+			if (myRing)
+			{
+				mine = result;
+			}
+		}
+		if (myRing)
+		{
+			VersusMatch.Send("ring", turn, lane, mine);
+		}
+		if (peerRing && !VersusMatch.TryTakeRing(turn, lane, out theirs))
+		{
+			VersusBanner.Text = "Waiting for " + VersusMatch.PeerName + "...";
+			float reachableSince = Time.realtimeSinceStartup;
+			float skippedSince = -1f;
+			while (!VersusMatch.Over && !VersusMatch.TryTakeRing(turn, lane, out theirs))
+			{
+				float now = Time.realtimeSinceStartup;
+				VersusSession session = VersusSession.Instance;
+				if (session == null || !session.IsConnected || session.PeerLost)
+				{
+					// Only time the friend could have answered counts.
+					reachableSince = now;
+				}
+				if (!VersusMatch.PeerMovedPast(turn, lane))
+				{
+					skippedSince = -1f;
+				}
+				else if (skippedSince < 0f)
+				{
+					skippedSince = now;
+				}
+				if ((skippedSince >= 0f && now - skippedSince > VersusRingSkippedSeconds) || now - reachableSince > VersusRingWaitSeconds)
+				{
+					// The friend's game never fought this lane: the games disagree. Count it as a miss.
+					VersusMatch.ReportDesync("no ring from friend for lane " + lane);
+					theirs = "Miss";
+					break;
+				}
+				yield return null;
+			}
+			VersusBanner.Text = null;
+		}
+		if (VersusMatch.Over)
+		{
+			yield break;
+		}
+		string attackerTap = (!iAttack) ? theirs : mine;
+		string defenderTap = (!iAttack) ? mine : theirs;
+		string outcome = VersusMatch.CombineRings(attackerTap, defenderTap, defended, noAttack);
+		VersusMatch.Log("lane " + lane + ": attacker " + attackerTap + ", defender " + defenderTap + " -> " + outcome);
+		versusCounterView = false;
+		versusSkipSequence = false;
+		VersusMatch.LaneCrit = outcome == VersusMatch.Crit;
+		LeaderItem attackerLeader = GameInstance.GetLeader(player);
+		float? critMod = (attackerLeader == null) ? null : attackerLeader.Form.CritDamageMod;
+		VersusMatch.LaneCritModifier = (!critMod.HasValue) ? 2f : critMod.Value;
+		if (outcome == VersusMatch.Normal || outcome == VersusMatch.Crit)
+		{
+			result = (!iAttack) ? "Miss" : ((outcome != VersusMatch.Crit) ? "Hit" : "Crit");
+		}
+		else if (outcome == VersusMatch.Counter)
+		{
+			result = (!iAttack) ? "Crit" : "Miss";
+			versusCounterView = iAttack;
+		}
+		else
+		{
+			result = (!iAttack) ? "Hit" : "Miss";
+			versusSkipSequence = !iAttack && !defended;
+		}
+		yield return StartCoroutine(BattleAction());
+		VersusMatch.LaneCrit = false;
+	}
+
 	private void DebugRingStart()
 	{
 		StartCoroutine(RingStart());
@@ -337,13 +473,13 @@ public class CWBattleSequenceController : MonoBehaviour
 	{
 		while (!_keyPressed)
 		{
-			if (Input.GetMouseButtonDown(0))
+			if (Input.GetMouseButtonDown(0) || VersusRobot.WantsRingTap(currentAngle, hitAreaStart, hitAreaEnd, critAreaStart, critAreaEnd))
 			{
 				yield return StartCoroutine(StopRing());
 				break;
 			}
 			yield return 0;
-			if (round == roundLimit)
+			if (round == roundLimit || (VersusMatch.Active && timeOutFlag))
 			{
 				yield return StartCoroutine(StopRing());
 			}
@@ -353,6 +489,16 @@ public class CWBattleSequenceController : MonoBehaviour
 	public IEnumerator BattleEnd(bool GameOver)
 	{
 		yield return null;
+		if (VersusMatch.Active)
+		{
+			versusRingOnly = false;
+			while (!GameOver && !VersusMatch.Over && VersusMatch.DeathsPending())
+			{
+				yield return null;
+			}
+			result = string.Empty;
+			VersusMatch.LaneCrit = false;
+		}
 		Time.timeScale = 1f;
 		StopAllCoroutines();
 		HandleBattlePerformanceThrottle(false);
@@ -453,7 +599,7 @@ public class CWBattleSequenceController : MonoBehaviour
 		float min = timeFor1SpinMin.Value * activeQuest.SpinFactor;
 		float? timeFor1SpinMax = leader.TimeFor1SpinMax;
 		totalTime = Random.Range(min, timeFor1SpinMax.Value * activeQuest.SpinFactor);
-		if (debugFlag.battleDisplay.superSlowBattleRing)
+		if (debugFlag.battleDisplay.superSlowBattleRing && !VersusMatch.Active)
 		{
 			totalTime = 6f;
 		}
@@ -529,6 +675,10 @@ public class CWBattleSequenceController : MonoBehaviour
 		GetComponent<AudioSource>().Stop();
 		awayTweenTarget.SendMessage("OnClick", SendMessageOptions.DontRequireReceiver);
 		yield return new WaitForSeconds(0.2f);
+		if (versusRingOnly)
+		{
+			yield break;
+		}
 		yield return StartCoroutine(BattleAction());
 	}
 
@@ -555,7 +705,7 @@ public class CWBattleSequenceController : MonoBehaviour
 			{
 				stop = false;
 			}
-			if (player == PlayerType.User && result == "Miss")
+			if (player == PlayerType.User && result == "Miss" && !versusCounterView)
 			{
 				damageTweenTarget = GetTweenTarget(result + "DamageNoCreature");
 			}
@@ -570,6 +720,10 @@ public class CWBattleSequenceController : MonoBehaviour
 			{
 				damageTweenTarget = GetTweenTarget(result + "DamageNoCreature");
 			}
+		}
+		if (VersusMatch.Active && versusSkipSequence)
+		{
+			stop = true;
 		}
 		if (!stop)
 		{

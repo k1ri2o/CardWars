@@ -117,6 +117,16 @@ public class CWFloopActionManager : MonoBehaviour
 
 	public IEnumerator PlayFloopAction()
 	{
+		if (VersusMatch.Active && player == (int)PlayerType.User)
+		{
+			if (VersusMatch.Over || !GameInstance.LaneHasCreature(PlayerType.User, lane) || !VersusMatch.LocalInputAllowed())
+			{
+				yield break;
+			}
+			// Nothing else may start until this floop has begun (see DoWaitThenTrigger).
+			VersusMatch.LocalFloopPending = true;
+			VersusMatch.Send("floop", lane);
+		}
 		GameObject target = creatureMgr.Spawn_Points[player, lane, 0].gameObject;
 		FillFloopInfo();
 		FloopCameraTrigger(target, false);
@@ -137,11 +147,18 @@ public class CWFloopActionManager : MonoBehaviour
 
 	private IEnumerator DoWaitThenTrigger(float waitTime, Animation anim, string animName)
 	{
+		// Keep who and where: tapping a creature to look at it rewrites player and lane.
+		int floopPlayer = player;
+		int floopLane = lane;
 		PlayAnimOnce(anim, animName);
 		UICamera.useInputEnabler = true;
 		FloopFX();
 		yield return new WaitForSeconds(waitTime);
-		GameInstance.FloopCard(player, lane, CardType.Creature);
+		GameInstance.FloopCard(floopPlayer, floopLane, CardType.Creature);
+		if (floopPlayer == (int)PlayerType.User)
+		{
+			VersusMatch.LocalFloopPending = false;
+		}
 	}
 
 	private void FloopFX()
@@ -197,7 +214,7 @@ public class CWFloopActionManager : MonoBehaviour
 		}
 		string stringFromJson = GetStringFromJson(source.Data.Form.ScriptVizName, "TargetCreatureAnimDelay");
 		float waitTime = ((!(stringFromJson != string.Empty)) ? 0f : float.Parse(stringFromJson));
-		StartCoroutine(DoSequenceSpawnCreature(waitTime, source, targets));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnCreature(waitTime, source, targets)));
 	}
 
 	public void DoEffect(CardScript source, PlayerType player)
@@ -214,7 +231,7 @@ public class CWFloopActionManager : MonoBehaviour
 		{
 			phaseMgr.Phase = ((source.Owner != PlayerType.User) ? BattlePhase.P2SpellHero : BattlePhase.P1SpellHero);
 		}
-		StartCoroutine(DoSequenceSpawnHero(heroFxWaitTime1, heroFxWaitTime2, source, player));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnHero(heroFxWaitTime1, heroFxWaitTime2, source, player)));
 	}
 
 	public void DoEffectNeutral(CardScript source, CardScript[] targets)
@@ -222,13 +239,13 @@ public class CWFloopActionManager : MonoBehaviour
 		BattlePhaseManager.GetInstance().Phase = ((player != (int)PlayerType.User) ? BattlePhase.P2FloopAction : BattlePhase.P1FloopAction);
 		string stringFromJson = GetStringFromJson(source.Data.Form.ScriptVizName, "TargetCreatureAnimDelay");
 		float waitTime = ((!(stringFromJson != string.Empty)) ? 0f : float.Parse(stringFromJson));
-		StartCoroutine(DoSequenceSpawnNeutral(waitTime, source, targets));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnNeutral(waitTime, source, targets)));
 	}
 
 	public void DoEffect(CardScript source, int lane)
 	{
 		BattlePhaseManager.GetInstance().Phase = ((source.Owner != PlayerType.User) ? BattlePhase.P2FloopAction : BattlePhase.P1FloopAction);
-		StartCoroutine(DoSequenceSpawnPersistent(source, lane));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnPersistent(source, lane)));
 	}
 
 	private void TriggerSpawnFX(string scriptVizName, GameObject target, string colName, CardScript source)
@@ -519,6 +536,15 @@ public class CWFloopActionManager : MonoBehaviour
 			}
 			float delayAfterAnim = ((!(num == string.Empty)) ? float.Parse(num) : 0f);
 			yield return new WaitForSeconds(delayAfterAnim);
+			while (VersusMatch.Active && VersusMatch.DeathsPending())
+			{
+				yield return null;
+			}
+			if (VersusMatch.Active && (sc.Data.Form.Type == CardType.Creature || sc.Data.Form.Type == CardType.Building) && sc.CurrentLane != null && sc.CurrentLane.Scripts[(int)sc.Data.Form.Type] != sc)
+			{
+				// The target left play while earlier deaths were settling.
+				continue;
+			}
 			resumeOnComplete = source.DoResult(sc) && resumeOnComplete;
 			yield return new WaitForSeconds(1f - waitTime - delayAfterAnim);
 		}
@@ -607,6 +633,15 @@ public class CWFloopActionManager : MonoBehaviour
 			string num = GetStringFromJson(source.Data.Form.ScriptVizName, "DelayAfterAnimation");
 			float delayAfterAnim = ((!(num == string.Empty)) ? float.Parse(num) : 0f);
 			yield return new WaitForSeconds(delayAfterAnim);
+			while (VersusMatch.Active && VersusMatch.DeathsPending())
+			{
+				yield return null;
+			}
+			if (VersusMatch.Active && (sc.Data.Form.Type == CardType.Creature || sc.Data.Form.Type == CardType.Building) && sc.CurrentLane != null && sc.CurrentLane.Scripts[(int)sc.Data.Form.Type] != sc)
+			{
+				// The target left play while earlier deaths were settling.
+				continue;
+			}
 			resumeOnComplete = source.DoResult(sc) && resumeOnComplete;
 			yield return new WaitForSeconds(1f - waitTime - delayAfterAnim);
 		}
@@ -815,7 +850,7 @@ public class CWFloopActionManager : MonoBehaviour
 
 	public void TriggerLeader(PlayerType player)
 	{
-		StartCoroutine(DelayTriggerLeader(player));
+		StartCoroutine(VersusMatch.Track(player, DelayTriggerLeader(player)));
 	}
 
 	private IEnumerator DelayTriggerLeader(PlayerType player)

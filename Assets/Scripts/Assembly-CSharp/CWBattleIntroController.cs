@@ -89,7 +89,7 @@ public class CWBattleIntroController : MonoBehaviour
 		{
 			if (GlobalFlags.Instance.InMPMode)
 			{
-				NameP1.text = PlayerInfoScript.GetInstance().MPPlayerName;
+				NameP1.text = VersusMatch.Active ? VersusMatch.MyName : PlayerInfoScript.GetInstance().MPPlayerName;
 			}
 			else
 			{
@@ -101,7 +101,7 @@ public class CWBattleIntroController : MonoBehaviour
 		{
 			if (GlobalFlags.Instance.InMPMode)
 			{
-				NameP2.text = PlayerInfoScript.GetInstance().MPOpponentName;
+				NameP2.text = VersusMatch.Active ? VersusMatch.PeerName : PlayerInfoScript.GetInstance().MPOpponentName;
 			}
 			else
 			{

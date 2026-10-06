@@ -145,7 +145,7 @@ public class MoveBuildingOpponent : SpellScript
 
 	public override void Cast()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			SelectingBuilding = true;
 			StartTargetSelection(!base.Owner, SelectionType.Building, KFFLocalization.Get("!!PICK_A_BUILDING_TO_MOVE"));

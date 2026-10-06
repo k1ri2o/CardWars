@@ -272,7 +272,7 @@ public class GameState
 		}
 		SetCharacters(CharacterDataManager.Instance.GetCharacterData(leaderItem.Form.CharacterID), CharacterDataManager.Instance.GetCharacterData(opponentDeckCopy.Leader.Form.CharacterID));
 		SetDecks(playerDeckCopy, opponentDeckCopy);
-		if (DebugFlagsScript.GetInstance().QuickWin)
+		if (DebugFlagsScript.GetInstance().QuickWin && !VersusMatch.Active)
 		{
 			SetHealth(1000, 1);
 		}
@@ -396,7 +396,7 @@ public class GameState
 		CreatureManagerScript.GetInstance().SetupUniqueListForPool();
 		LandscapeManagerScript.GetInstance().PoolLandscape();
 		Deck deck2 = Decks[(int)PlayerType.User];
-		deck2.Shuffle();
+		deck2.Shuffle(PlayerType.User);
 		Singleton<AnalyticsManager>.Instance.LogQuestStart();
 		Singleton<AnalyticsManager>.Instance.LogLeaderEquipped(deck2.Leader.Form.ID, deck2.Leader.Rank);
 		Singleton<AnalyticsManager>.Instance.LogDeckEquipped(deck2.GetCards());
@@ -409,8 +409,11 @@ public class GameState
 		}
 		SummonedCards[(int)PlayerType.User].Clear();
 		deck2 = Decks[(int)PlayerType.Opponent];
-		deck2.Shuffle();
-		deck2.ShuffleLandscapes();
+		deck2.Shuffle(PlayerType.Opponent);
+		if (!VersusMatch.Active)
+		{
+			deck2.ShuffleLandscapes();
+		}
 		LeaderCooldown[(int)PlayerType.Opponent] = deck2.Leader.Form.Cooldown;
 		StaticLootList.Clear();
 		Hands[(int)PlayerType.Opponent].Clear();
@@ -440,6 +443,7 @@ public class GameState
 					Lanes[i, j].FloopMod = 0;
 					Lanes[i, j].RarityGate = int.MaxValue;
 				}
+				Lanes[i, j].Disabled = false;
 			}
 			SpellsInEffect[i].Clear();
 			PersistentSpellsInEffect[i].Clear();
@@ -507,7 +511,11 @@ public class GameState
 	public void DealDamage(PlayerType player, int damage)
 	{
 		CWBattleSequenceController cWBattleSequenceController = CWBattleSequenceController.GetInstance();
-		if (cWBattleSequenceController.result == "Crit")
+		if (VersusMatch.Active)
+		{
+			// In a 1v1 match the battle code applies crits itself, only to lane damage.
+		}
+		else if (cWBattleSequenceController.result == "Crit")
 		{
 			damage = (int)((float)damage * cWBattleSequenceController.damageModifierCrit);
 		}
@@ -562,7 +570,7 @@ public class GameState
 
 	public void AddMagicPoints(PlayerType player, int points, bool checkForOutOfActions = true)
 	{
-		if (DebugFlagsScript.GetInstance().InfiniteMagic && player == PlayerType.User && points < 0)
+		if (DebugFlagsScript.GetInstance().InfiniteMagic && player == PlayerType.User && points < 0 && !VersusMatch.Active)
 		{
 			return;
 		}
@@ -712,7 +720,7 @@ public class GameState
 	public void Reshuffle(PlayerType player)
 	{
 		Deck deck = Decks[(int)player];
-		deck.Shuffle();
+		deck.Shuffle(player);
 	}
 
 	public Deck GetDeck(PlayerType player)
@@ -809,7 +817,7 @@ public class GameState
 		}
 		if (list2.Count > 0)
 		{
-			num = UnityEngine.Random.Range(0, list2.Count);
+			num = VersusRandom.Range(player, 0, list2.Count);
 			cardItem = list2[num];
 		}
 		if (cardItem != null)
@@ -893,8 +901,10 @@ public class GameState
 	public void CheckForDeaths()
 	{
 		bool flag = false;
-		for (int i = 0; i < 2; i++)
+		for (int n = 0; n < 2; n++)
 		{
+			// In a 1v1 match both computers handle deaths in seat order.
+			int i = (!VersusMatch.Active) ? n : (int)VersusMatch.PlayerOfSeat(n);
 			for (int j = 0; j < 4; j++)
 			{
 				if (!LaneHasCreature(i, j))
@@ -1847,6 +1857,23 @@ public class GameState
 		LandscapeManager.UnhighlightLandscape(player, lane);
 	}
 
+	// The card waiting for a lane pick, and on which side (read by the 1v1 test robot).
+	public CardScript CurrentTargetingListener
+	{
+		get
+		{
+			return TargetingListener;
+		}
+	}
+
+	public PlayerType CurrentSelectionSide
+	{
+		get
+		{
+			return SelectionSide;
+		}
+	}
+
 	public void SetTargetingListener(PlayerType side, CardScript script)
 	{
 		SelectionSide = side;
@@ -1855,6 +1882,26 @@ public class GameState
 
 	public void SelectTarget(int idx)
 	{
+		if (VersusMatch.Active)
+		{
+			// Only the card's owner picks: the friend's picks arrive through SelectTargetFromPeer.
+			if (TargetingListener == null || TargetingListener.Owner != PlayerType.User)
+			{
+				return;
+			}
+			VersusMatch.Send("target", idx);
+		}
+		Lane lane = GetLane(SelectionSide, idx);
+		TargetingListener.OnTargetSelected(lane);
+	}
+
+	public void SelectTargetFromPeer(int idx)
+	{
+		if (TargetingListener == null || idx < 0 || idx >= 4)
+		{
+			VersusMatch.ReportDesync("lane pick " + idx + " with nothing waiting for it");
+			return;
+		}
 		Lane lane = GetLane(SelectionSide, idx);
 		TargetingListener.OnTargetSelected(lane);
 	}
@@ -1918,6 +1965,11 @@ public class GameState
 			{
 				TutorialMonitor.Instance.TriggerTutorial(TutorialTrigger.OpponentTurn);
 			}
+		}
+		else if (VersusMatch.Active)
+		{
+			// 1v1 rule: out of cards, both players reshuffle their discard pile and draw 5.
+			ReshuffleOpponentCards(player);
 		}
 		else
 		{

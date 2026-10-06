@@ -1,0 +1,61 @@
+name: Card Wars 1v1 build
+
+# Compiles the game's scripts into Assembly-CSharp.dll for the Windows release of Card Wars
+# (shishkabob27/CardWars 1.12.8). On pushes it also publishes the DLL and the installer
+# to the "1v1-latest" pre-release, which versus/Install-CardWars1v1.ps1 downloads from.
+on:
+  push:
+    branches: [main, claude/card-wars-multiplayer-qyaoud]
+    paths: ['Assets/**/*.cs', 'versus/**', '.github/workflows/versus.yml']
+  pull_request:
+    paths: ['Assets/**/*.cs', 'versus/**', '.github/workflows/versus.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GAME_ZIP: https://github.com/shishkabob27/CardWars/releases/download/1.12.8/CardWars-Windows.zip
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the C# compiler
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mono-mcs
+      - name: Get the release's engine libraries
+        run: |
+          curl -sSL -o game.zip "$GAME_ZIP"
+          unzip -q game.zip 'CardWars/game/CardWars_Data/Managed/*' -d release
+      - name: Build Assembly-CSharp.dll
+        run: versus/build-dll.sh release/CardWars/game/CardWars_Data/Managed Assembly-CSharp.dll
+      # Internet play goes through free public MQTT relays: check that they answer and pass
+      # messages with the game's own code. Informational, so a relay outage doesn't block a build.
+      - name: Check the internet relays
+        continue-on-error: true
+        run: |
+          mkdir relaycheck
+          cp Assembly-CSharp.dll release/CardWars/game/CardWars_Data/Managed/UnityEngine.dll relaycheck/
+          mcs -nologo -out:relaycheck/RelayCheck.exe -r:relaycheck/Assembly-CSharp.dll -r:relaycheck/UnityEngine.dll versus/RelayCheck.cs
+          timeout 240 mono relaycheck/RelayCheck.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardWars-1v1
+          path: |
+            Assembly-CSharp.dll
+            versus/Install-CardWars1v1.ps1
+            versus/Install Card Wars 1v1.bat
+      - name: Publish to the 1v1-latest pre-release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view 1v1-latest > /dev/null 2>&1; then
+            gh release create 1v1-latest --prerelease --target "$GITHUB_SHA" \
+              --title "Card Wars 1v1 (latest build)" \
+              --notes "Live 1v1 against a friend inside Card Wars. Install: see versus/README.md"
+          fi
+          cp "versus/Install Card Wars 1v1.bat" Install-CardWars1v1.bat
+          gh release upload 1v1-latest Assembly-CSharp.dll versus/Install-CardWars1v1.ps1 Install-CardWars1v1.bat --clobber
+          gh release edit 1v1-latest --notes "Live 1v1 against a friend inside Card Wars. Built from ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}. Install: see versus/README.md"

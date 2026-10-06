@@ -1,0 +1,13 @@
+{
+  "name": "cardwars-lan-server",
+  "private": true,
+  "type": "module",
+  "description": "Serves the Card Wars web game and runs PeerJS signaling for LAN play",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "peer": "^1.0.2"
+  }
+}

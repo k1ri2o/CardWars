@@ -18,7 +18,7 @@ public class DebugAutoWin : MonoBehaviour
 	{
 		debugFlag = DebugFlagsScript.GetInstance();
 		phaseMgr = BattlePhaseManager.GetInstance();
-		if (debugFlag.QuickWin)
+		if (debugFlag.QuickWin && !VersusMatch.Active)
 		{
 			GameState.Instance.SetHealth(1000, 1);
 		}
@@ -26,6 +26,10 @@ public class DebugAutoWin : MonoBehaviour
 
 	private void Update()
 	{
+		if (VersusMatch.Active)
+		{
+			return;
+		}
 		if (debugFlag.autoWin && !autoWinFlag)
 		{
 			GameState.Instance.SetHealth(PlayerType.Opponent, 0);

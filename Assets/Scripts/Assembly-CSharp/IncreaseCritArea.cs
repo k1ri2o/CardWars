@@ -2,7 +2,7 @@ public class IncreaseCritArea : CreatureScript
 {
 	public override bool CanFloop()
 	{
-		return (int)GameState.Instance.CritAreaModifier == 0;
+		return (int)VersusMatch.GetAreaMod(base.Owner, VersusMatch.AreaCrit) == 0;
 	}
 
 	public override int EvaluateAbility()
@@ -18,7 +18,7 @@ public class IncreaseCritArea : CreatureScript
 
 	public override bool DoResult(CardScript target)
 	{
-		base.GameInstance.CritAreaModifier = (float)base.Data.Val1 / 100f;
+		VersusMatch.SetAreaMod(base.Owner, VersusMatch.AreaCrit, (float)base.Data.Val1 / 100f);
 		return true;
 	}
 }

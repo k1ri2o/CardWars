@@ -38,6 +38,12 @@ public class CWP1SetupBranch : MonoBehaviour
 
 	public void Advance()
 	{
+		if (VersusMatch.Active && !VersusMatch.Over && !PauseMenu.pauseMenuShown)
+		{
+			// End of the local player's turn (not the surrender button, which also lands here).
+			VersusMatch.Send("end");
+			VersusMatch.TurnFinished(GameDataScript.GetInstance().Turn);
+		}
 		if (GameDataScript.GetInstance().Turn <= 1)
 		{
 			BattleManagerScript.GetInstance().P1BattleFinished();
@@ -51,6 +57,6 @@ public class CWP1SetupBranch : MonoBehaviour
 
 	private void Update()
 	{
-		col.enabled = phaseMgr.Phase == BattlePhase.P1Setup;
+		col.enabled = phaseMgr.Phase == BattlePhase.P1Setup && VersusMatch.LocalInputAllowed();
 	}
 }

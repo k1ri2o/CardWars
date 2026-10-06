@@ -8,7 +8,7 @@ public class CWPlayerLose : AsyncData<string>
 
 	private void OnEnable()
 	{
-		if (GlobalFlags.Instance.InMPMode && Asyncdata.processed)
+		if (GlobalFlags.Instance.InMPMode && Asyncdata.processed && !VersusMatch.Active)
 		{
 			global::Multiplayer.Multiplayer.MatchFinish(SessionManager.GetInstance().theSession, CWMPMapController.GetInstance().mLastMPData.mMatchID, true, StringCallback);
 		}

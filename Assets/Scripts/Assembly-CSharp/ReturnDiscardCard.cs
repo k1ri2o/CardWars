@@ -87,7 +87,7 @@ public class ReturnDiscardCard : CreatureScript
 
 	public override void Floop()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			OpenDiscardPile();
 			return;

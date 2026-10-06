@@ -10,11 +10,26 @@ public class SurrenderMenu : AsyncData<string>
 	{
 		PauseMenu.pauseMenuShown = true;
 		savedTimeScale = Time.timeScale;
-		Time.timeScale = 0f;
+		// A 1v1 match can't be paused: the friend's game keeps going, so this one does too.
+		if (!VersusMatch.Active)
+		{
+			Time.timeScale = 0f;
+		}
 	}
 
 	private void SurrenderMenuYes()
 	{
+		if (VersusMatch.Active)
+		{
+			if (!VersusMatch.Over)
+			{
+				VersusMatch.LocalSurrendered = true;
+				VersusMatch.Over = true;
+				VersusMatch.Send("surrender");
+			}
+			SurrenderMenuDone();
+			return;
+		}
 		if (GlobalFlags.Instance.InMPMode && Asyncdata.processed)
 		{
 			global::Multiplayer.Multiplayer.MatchFinish(SessionManager.GetInstance().theSession, CWMPMapController.GetInstance().mLastMPData.mMatchID, true, StringCallback);
@@ -43,7 +58,10 @@ public class SurrenderMenu : AsyncData<string>
 
 	private void SurrenderMenuDone()
 	{
-		Time.timeScale = savedTimeScale;
+		if (!VersusMatch.Active)
+		{
+			Time.timeScale = savedTimeScale;
+		}
 		PauseMenu.pauseMenuShown = false;
 	}
 }

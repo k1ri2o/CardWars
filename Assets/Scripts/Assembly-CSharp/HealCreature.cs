@@ -69,7 +69,7 @@ public class HealCreature : SpellScript
 
 	public override void Cast()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(base.Owner, SelectionType.Creature, KFFLocalization.Get("!!PICK_A_CREATURE"));
 			return;

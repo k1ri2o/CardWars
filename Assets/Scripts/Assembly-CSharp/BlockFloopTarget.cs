@@ -12,7 +12,7 @@ public class BlockFloopTarget : CreatureScript
 			if (item.HasCreature())
 			{
 				CreatureScript creature = item.GetCreature();
-				if (!creature.FloopBlocked && (base.Owner == PlayerType.User || creature.CanFloop()))
+				if (!creature.FloopBlocked && (VersusMatch.IsHumanControlled(base.Owner) || creature.CanFloop()))
 				{
 					return true;
 				}
@@ -111,7 +111,7 @@ public class BlockFloopTarget : CreatureScript
 
 	public override void Floop()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(!base.Owner, SelectionType.Creature, KFFLocalization.Get("!!TAP_CREATURE_TO_BLOCK_FLOOP"));
 			return;

@@ -246,6 +246,11 @@ public class CardScript
 
 	protected void StartTargetSelection(PlayerType player, SelectionType targetType, string instruction)
 	{
+		if (VersusMatch.IsRemote(Owner))
+		{
+			StartPeerTargetSelection(player);
+			return;
+		}
 		UICamera.useInputEnabler = false;
 		Flooping = true;
 		GameState instance = GameState.Instance;
@@ -274,6 +279,31 @@ public class CardScript
 		}
 	}
 
+	// The friend's card asks for a lane: light up the choices and wait for their pick.
+	private void StartPeerTargetSelection(PlayerType player)
+	{
+		Flooping = true;
+		GameState instance = GameState.Instance;
+		bool flag = false;
+		for (int i = 0; i < 4; i++)
+		{
+			Lane lane = instance.GetLane(player, i);
+			if (SelectionFilter(lane))
+			{
+				flag = true;
+				instance.HighlightLandscape(player, i);
+			}
+		}
+		instance.SetTargetingListener(player, this);
+		if (!flag)
+		{
+			EndTargetSelection();
+			return;
+		}
+		VersusMatch.PendingLanePick = this;
+		VersusBanner.Text = VersusMatch.PeerName + " is choosing a target...";
+	}
+
 	protected CWList<Lane> AITargetSelection(PlayerType player, SelectionType targetType)
 	{
 		CWList<Lane> cWList = new CWList<Lane>();
@@ -300,6 +330,14 @@ public class CardScript
 
 	protected void EndTargetSelection()
 	{
+		if (VersusMatch.PendingLanePick == this)
+		{
+			VersusMatch.PendingLanePick = null;
+		}
+		if (VersusMatch.IsRemote(Owner))
+		{
+			VersusBanner.Text = null;
+		}
 		Flooping = false;
 		GameState instance = GameState.Instance;
 		instance.ClearHighlights();
@@ -307,6 +345,18 @@ public class CardScript
 
 	public void OpenDiscardPile()
 	{
+		if (VersusMatch.IsRemote(Owner))
+		{
+			// The friend picks from their discard pile on their screen; wait for the pick.
+			CardSelected = false;
+			VersusMatch.PendingCardPick = this;
+			VersusBanner.Text = VersusMatch.PeerName + " is picking from their discard pile...";
+			return;
+		}
+		if (VersusMatch.Active)
+		{
+			VersusMatch.LocalCardPick = this;
+		}
 		UICamera.useInputEnabler = false;
 		CWDiscardPileSet instance = CWDiscardPileSet.GetInstance(Owner);
 		UIButtonTween component = instance.gameObject.GetComponent<UIButtonTween>();
@@ -331,6 +381,16 @@ public class CardScript
 
 	public void CloseDiscardPile()
 	{
+		if (VersusMatch.IsRemote(Owner))
+		{
+			CardSelected = true;
+			VersusBanner.Text = null;
+			return;
+		}
+		if (VersusMatch.LocalCardPick == this)
+		{
+			VersusMatch.LocalCardPick = null;
+		}
 		CWDiscardPileSet instance = CWDiscardPileSet.GetInstance(Owner);
 		UIButtonTween component = instance.gameObject.GetComponent<UIButtonTween>();
 		GameObject tweenTarget = component.tweenTarget;

@@ -9,7 +9,7 @@ public class ActionPointLandscapes : SpellScript
 			return false;
 		}
 		bool flag = CardScript.CanPlay(player, lane, card);
-		if (flag && player == PlayerType.Opponent && flag)
+		if (flag && VersusMatch.IsAI(player) && flag)
 		{
 			int num = GameState.Instance.LandscapeTypeCount();
 			GameState.Instance.AddMagicPoints(player, num);

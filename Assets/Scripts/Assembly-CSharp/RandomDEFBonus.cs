@@ -40,7 +40,7 @@ public class RandomDEFBonus : CreatureScript
 
 	public override bool DoResult(CardScript target)
 	{
-		(target as CreatureScript).DEFMod += Random.Range(base.Data.Val1, base.Data.Val2 + 1);
+		(target as CreatureScript).DEFMod += VersusRandom.Range(base.Owner, base.Data.Val1, base.Data.Val2 + 1);
 		return true;
 	}
 }

@@ -85,6 +85,14 @@ public class CWDiscardCard : MonoBehaviour
 	{
 		if (filterScript != null && !filterScript.CardSelected)
 		{
+			if (VersusMatch.Active)
+			{
+				if (filterScript.Owner != PlayerType.User)
+				{
+					return;
+				}
+				VersusMatch.Send("pick", GameState.Instance.GetDiscardPile(filterScript.Owner).IndexOf(card), card.Form.ID);
+			}
 			filterScript.CardSelection(card);
 		}
 	}

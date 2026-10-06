@@ -45,7 +45,7 @@ public class CWCommandCardSet : MonoBehaviour
 			floopActionMgr.lane = lane - 1;
 			floopActionMgr.card = creature.Data;
 			floopActionMgr.anim = creatureObj.GetComponent<Animation>();
-			if (BattlePhaseManager.GetInstance().Phase != BattlePhase.P1Setup)
+			if (BattlePhaseManager.GetInstance().Phase != BattlePhase.P1Setup || !VersusMatch.LocalInputAllowed())
 			{
 				return;
 			}

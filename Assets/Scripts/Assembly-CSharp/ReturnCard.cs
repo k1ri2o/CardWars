@@ -95,7 +95,7 @@ public class ReturnCard : SpellScript
 
 	public override bool DoResult(CardScript target)
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			OpenDiscardPile();
 		}

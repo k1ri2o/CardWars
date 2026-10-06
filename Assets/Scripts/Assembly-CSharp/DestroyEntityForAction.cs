@@ -16,7 +16,7 @@ public class DestroyEntityForAction : SpellScript
 			{
 				flag = false;
 			}
-			if (player == PlayerType.Opponent && flag)
+			if (VersusMatch.IsAI(player) && flag)
 			{
 				GameState.Instance.AddMagicPoints(player, 4);
 				Locked = true;
@@ -93,7 +93,7 @@ public class DestroyEntityForAction : SpellScript
 
 	public override void Cast()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(base.Owner, (SelectionType)base.Data.Form.BaseVal1, KFFLocalization.Get("!!PICK_A_SACRIFICE"));
 			return;

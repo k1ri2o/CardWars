@@ -75,7 +75,7 @@ public class CWBattleEndRewardWinner : AsyncData<string>
 		}
 		if (!flag)
 		{
-			if (instance.InMPMode && Asyncdata.processed)
+			if (instance.InMPMode && Asyncdata.processed && !VersusMatch.Active)
 			{
 				global::Multiplayer.Multiplayer.MatchFinish(SessionManager.GetInstance().theSession, CWMPMapController.GetInstance().mLastMPData.mMatchID, false, StringCallback);
 				if ((bool)TrophyEarned)

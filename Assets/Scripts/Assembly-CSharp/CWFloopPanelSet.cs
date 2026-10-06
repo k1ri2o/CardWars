@@ -36,6 +36,10 @@ public class CWFloopPanelSet : MonoBehaviour
 
 	private void OnClick()
 	{
+		if (VersusMatch.Active && (playerType != (int)PlayerType.User || !VersusMatch.LocalInputAllowed()))
+		{
+			return;
+		}
 		UICamera.useInputEnabler = true;
 		CreatureScript creatureScript = null;
 		if (floopSetFlag)

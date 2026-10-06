@@ -240,6 +240,18 @@ public class LandscapeManagerScript : MonoBehaviour
 
 	public void AssignOpponentLandscapes()
 	{
+		if (VersusMatch.Active)
+		{
+			// The friend's own placement, once it has arrived (see CWSetPhase for the wait).
+			if (VersusMatch.PeerLandscapes != null)
+			{
+				for (int j = 0; j < 4; j++)
+				{
+					GameInstance.SetLandscape(PlayerType.Opponent, j, VersusMatch.PeerLandscapes[j]);
+				}
+			}
+			return;
+		}
 		for (int i = 0; i < 4; i++)
 		{
 			LandscapeType landscapeInDeck = GameInstance.GetLandscapeInDeck(PlayerType.Opponent, i);

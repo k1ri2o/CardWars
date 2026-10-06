@@ -68,6 +68,124 @@ public class CWOpponentActionSequencer : MonoBehaviour
 		NextPhase();
 	}
 
+	// The friend's turn in a 1v1 match: replay their moves in order, each once the board has settled.
+	public IEnumerator VersusTurn()
+	{
+		VersusMatch.Log("friend's turn " + GameDataScript.GetInstance().Turn);
+		float quietSince = -1f;
+		float strayPickSince = -1f;
+		while (!VersusMatch.Over)
+		{
+			if (!VersusMatch.IsQuiet(PlayerType.Opponent))
+			{
+				quietSince = -1f;
+				yield return null;
+				continue;
+			}
+			float now = Time.realtimeSinceStartup;
+			if (quietSince < 0f)
+			{
+				quietSince = now;
+			}
+			string[] move = VersusMatch.PeekMove();
+			if (move != null && !VersusMatch.IsTurnMove(move[0]))
+			{
+				// A pick with nothing asking for it: the games disagree. Drop it so play can go on.
+				if (strayPickSince < 0f)
+				{
+					strayPickSince = now;
+				}
+				else if (now - strayPickSince > 5f)
+				{
+					VersusMatch.ReportDesync("unexpected " + move[0] + " message");
+					VersusMatch.TakeMove();
+					strayPickSince = -1f;
+				}
+				yield return null;
+				continue;
+			}
+			strayPickSince = -1f;
+			if (move == null || now - quietSince < VersusMatch.SettleSeconds)
+			{
+				yield return null;
+				continue;
+			}
+			VersusMatch.TakeMove();
+			phaseMgr.Phase = BattlePhase.P2Setup;
+			if (move[0] == "end")
+			{
+				VersusMatch.TurnFinished(GameDataScript.GetInstance().Turn);
+				NextPhase();
+				yield break;
+			}
+			yield return new WaitForSeconds(0.5f);
+			yield return StartCoroutine(VersusMove(move));
+			quietSince = -1f;
+		}
+	}
+
+	private IEnumerator VersusMove(string[] move)
+	{
+		switch (move[0])
+		{
+		case "play":
+		case "spell":
+		{
+			int handIndex = VersusMessage.Int(move[1]);
+			string cardId = move[2];
+			int laneIndex = VersusMessage.Int(move[3]);
+			List<CardItem> hand = GameInstance.GetHand(PlayerType.Opponent);
+			CardItem card = (handIndex < 0 || handIndex >= hand.Count) ? null : hand[handIndex];
+			if (card == null || card.Form.ID != cardId)
+			{
+				VersusMatch.ReportDesync("card " + cardId + " not at hand slot " + handIndex);
+				card = hand.Find((CardItem c) => c.Form.ID == cardId);
+			}
+			if (card == null || laneIndex < 0 || laneIndex >= 4)
+			{
+				VersusMatch.ReportDesync("can't play " + cardId + " to lane " + laneIndex);
+				break;
+			}
+			if (!card.Form.CanPlay(PlayerType.Opponent, laneIndex))
+			{
+				VersusMatch.ReportDesync(cardId + " isn't playable to lane " + laneIndex + " here");
+			}
+			VersusMatch.Log("friend plays " + cardId + " to lane " + laneIndex);
+			yield return StartCoroutine(PlayCardToLane(card, GameInstance.GetLane(PlayerType.Opponent, laneIndex)));
+			break;
+		}
+		case "floop":
+		{
+			int laneIndex2 = VersusMessage.Int(move[1]);
+			if (laneIndex2 < 0 || laneIndex2 >= 4 || !GameInstance.LaneHasCreature(PlayerType.Opponent, laneIndex2))
+			{
+				VersusMatch.ReportDesync("no creature to floop in lane " + laneIndex2);
+				break;
+			}
+			CreatureScript creature = GameInstance.GetCreature(PlayerType.Opponent, laneIndex2);
+			if (!GameInstance.CanFloopCard(PlayerType.Opponent, creature))
+			{
+				VersusMatch.ReportDesync(creature.Data.Form.ID + " can't floop here");
+			}
+			VersusMatch.Log("friend floops lane " + laneIndex2);
+			AIDecision decision = new AIDecision();
+			decision.IsFloop = true;
+			decision.LaneChoice = GameInstance.GetLane(PlayerType.Opponent, laneIndex2);
+			decision.CardChoice = creature.Data;
+			yield return StartCoroutine(OpponentFloop(decision));
+			break;
+		}
+		case "leader":
+			if (!GameInstance.IsLeaderAbilityReady(PlayerType.Opponent))
+			{
+				VersusMatch.ReportDesync("friend's hero ability isn't ready here");
+			}
+			VersusMatch.Log("friend uses their hero ability");
+			yield return StartCoroutine(LeaderAction());
+			break;
+		}
+	}
+
 	private IEnumerator ExecuteDecision(AIDecision Decision)
 	{
 		phaseMgr.Phase = BattlePhase.P2Setup;

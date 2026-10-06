@@ -84,19 +84,19 @@ public class GameDataScript : MonoBehaviour
 		{
 			return;
 		}
-		if (Input.GetKeyDown("1"))
+		if (!VersusMatch.Active && Input.GetKeyDown("1"))
 		{
 			GameInstance.SetHealth(PlayerType.Opponent, 0);
 			UpdateText();
 			Timer = 1f;
 		}
-		if (Input.GetKeyDown("2"))
+		if (!VersusMatch.Active && Input.GetKeyDown("2"))
 		{
 			GameInstance.SetHealth(PlayerType.User, 0);
 			UpdateText();
 			Timer = 1f;
 		}
-		if (Input.GetKeyDown("0"))
+		if (!VersusMatch.Active && Input.GetKeyDown("0"))
 		{
 			GameInstance.SetMagicPoints(PlayerType.User, 100);
 			UpdateText();
@@ -120,8 +120,32 @@ public class GameDataScript : MonoBehaviour
 		}
 	}
 
+	// A 1v1 match decided away from the battle flow (the friend surrendered or left) goes to the result screen.
+	public void ForceEndGame()
+	{
+		GameOver = true;
+		Time.timeScale = 1f;
+		EndGame();
+	}
+
 	private void EndGame()
 	{
+		if (VersusMatch.Active)
+		{
+			VersusMatch.Over = true;
+			VersusMatch.ResultShown = true;
+			// A floop or pick that was cut off by the end may have left taps blocked.
+			UICamera.useInputEnabler = false;
+			bool localWins = GameInstance.GetHealth(PlayerType.User) > 0;
+			if (GameInstance.GetHealth(PlayerType.User) <= 0 && GameInstance.GetHealth(PlayerType.Opponent) <= 0)
+			{
+				localWins = VersusMatch.LocalWinsTie();
+			}
+			VersusMatch.Log("game over, " + (localWins ? "won" : "lost"));
+			VersusMatch.LocalResult(localWins);
+			phaseMgr.Phase = (!localWins) ? BattlePhase.Result_P1Defeated : BattlePhase.Result_P2Defeated;
+			return;
+		}
 		phaseMgr.Phase = ((GameInstance.GetHealth(PlayerType.User) > 0) ? BattlePhase.Result_P2Defeated : BattlePhase.Result_P1Defeated);
 	}
 

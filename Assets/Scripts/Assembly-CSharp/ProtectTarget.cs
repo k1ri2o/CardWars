@@ -81,7 +81,7 @@ public class ProtectTarget : CreatureScript
 
 	public override void Floop()
 	{
-		if (base.Owner == PlayerType.User)
+		if (VersusMatch.IsHumanControlled(base.Owner))
 		{
 			StartTargetSelection(base.Owner, SelectionType.Creature, KFFLocalization.Get("!!TAP_CREATURE_TO_PROTECT"));
 			return;

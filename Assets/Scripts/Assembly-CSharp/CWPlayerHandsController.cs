@@ -243,6 +243,11 @@ public class CWPlayerHandsController : MonoBehaviour
 
 	public bool CanPlay()
 	{
+		if (VersusMatch.Active)
+		{
+			// One move at a time in a 1v1 match, so both games apply moves in the same order.
+			return VersusMatch.LocalInputAllowed();
+		}
 		return (BattlePhaseManager.GetInstance().Phase == BattlePhase.P1Setup || BattlePhaseManager.GetInstance().Phase == BattlePhase.P1SetupAction) && !spinStart;
 	}
 
@@ -256,6 +261,10 @@ public class CWPlayerHandsController : MonoBehaviour
 			TutorialMonitor.Instance.HidePlayersFirstTurnLabel();
 			if (currentCard.Form.Type == CardType.Spell)
 			{
+				if (VersusMatch.Active)
+				{
+					VersusMatch.Send("spell", GameInstance.GetHand(PlayerType.User).IndexOf(card), card.Form.ID, lane);
+				}
 				TriggerSpell(PlayerType.User, card);
 			}
 			else if (!GameInstance.LaneHasCard(PlayerType.User, lane, currentCard.Form.Type))
@@ -305,12 +314,21 @@ public class CWPlayerHandsController : MonoBehaviour
 		else
 		{
 			spinStart = false;
-			StartCoroutine(panelMgrBattle.PlaySpellFx(card, player));
+			StartCoroutine(VersusMatch.Track(player, panelMgrBattle.PlaySpellFx(card, player)));
 		}
 	}
 
 	public void Summon(int lane, CardItem card)
 	{
+		if (VersusMatch.Active)
+		{
+			int handIndex = GameInstance.GetHand(PlayerType.User).IndexOf(card);
+			if (handIndex < 0 || VersusMatch.Over)
+			{
+				return;
+			}
+			VersusMatch.Send("play", handIndex, card.Form.ID, lane);
+		}
 		cardMgr.CardSelected = false;
 		GameInstance.Summon(PlayerType.User, lane, card);
 	}
@@ -372,7 +390,7 @@ public class CWPlayerHandsController : MonoBehaviour
 				component.enabled = true;
 			}
 			cardObj.SetActive(false);
-			StartCoroutine(panelMgrBattle.PlaySpellFx(currentCard, PlayerType.User));
+			StartCoroutine(VersusMatch.Track(PlayerType.User, panelMgrBattle.PlaySpellFx(currentCard, PlayerType.User)));
 			spinStart = false;
 			spinSpeed = 0f;
 			prevSpinSpeed = 0f;
