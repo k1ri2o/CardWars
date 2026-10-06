@@ -719,7 +719,8 @@ public class VersusRobot : MonoBehaviour
 		Deck deck = new Deck();
 		deck.Name = "Robot_Deck";
 		string hero = Heroes[rng.Next(Heroes.Length)];
-		deck.Leader = LeaderManager.Instance.CreateLeader(hero, 1 + rng.Next(5));
+		// Sturdy heroes (50-85 HP) make longer matches, so more cards get played per match.
+		deck.Leader = LeaderManager.Instance.CreateLeader(hero, 8 + rng.Next(8));
 		List<string> ids = new List<string>();
 		for (int i = 0; i < 30 && pool.Count > 0; i++)
 		{
