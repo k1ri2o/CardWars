@@ -1,6 +1,7 @@
 name: Publish web game to GitHub Pages
 
-# Needs Pages switched on once: Settings > Pages > Source: GitHub Actions.
+# Publishes web/ once Pages is switched on (Settings > Pages > Source: GitHub Actions).
+# While Pages is off, the publish job is skipped instead of failing.
 on:
   push:
     branches: [main]
@@ -17,7 +18,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages is off for this repository, so the web game was not published. Turn it on under Settings > Pages > Source: GitHub Actions."
+          fi
+
   deploy:
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
