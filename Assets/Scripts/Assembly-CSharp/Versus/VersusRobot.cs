@@ -361,7 +361,8 @@ public class VersusRobot : MonoBehaviour
 		{
 			return;
 		}
-		if (phase == BattlePhase.P1Setup && VersusMatch.LocalInputAllowed())
+		// A person's taps are ignored while the game locks input, so the robot waits too.
+		if (phase == BattlePhase.P1Setup && VersusMatch.LocalInputAllowed() && !UICamera.useInputEnabler)
 		{
 			int turn = GameDataScript.GetInstance().Turn;
 			if (turn != lastTurn)
@@ -380,7 +381,7 @@ public class VersusRobot : MonoBehaviour
 
 	private string DescribeWaits()
 	{
-		return "quiet " + VersusMatch.IsQuiet(PlayerType.User) + "/" + VersusMatch.IsQuiet(PlayerType.Opponent) + ", lane pick " + (VersusMatch.PendingLanePick != null) + ", card pick " + (VersusMatch.PendingCardPick != null) + ", my pick " + (VersusMatch.LocalCardPick != null) + ", deaths " + VersusMatch.DeathsPending() + ", banner " + VersusBanner.Text + ", timeScale " + Time.timeScale;
+		return "quiet " + VersusMatch.IsQuiet(PlayerType.User) + "/" + VersusMatch.IsQuiet(PlayerType.Opponent) + ", lane pick " + (VersusMatch.PendingLanePick != null) + ", card pick " + (VersusMatch.PendingCardPick != null) + ", my pick " + (VersusMatch.LocalCardPick != null) + ", deaths " + VersusMatch.DeathsPending() + ", effects " + VersusMatch.EffectCount(PlayerType.User) + "/" + VersusMatch.EffectCount(PlayerType.Opponent) + ", input locked " + UICamera.useInputEnabler + ", banner " + VersusBanner.Text + ", timeScale " + Time.timeScale;
 	}
 
 	// ---- Before the first turn ----

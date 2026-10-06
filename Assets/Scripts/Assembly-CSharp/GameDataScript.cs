@@ -134,6 +134,8 @@ public class GameDataScript : MonoBehaviour
 		{
 			VersusMatch.Over = true;
 			VersusMatch.ResultShown = true;
+			// A floop or pick that was cut off by the end may have left taps blocked.
+			UICamera.useInputEnabler = false;
 			bool localWins = GameInstance.GetHealth(PlayerType.User) > 0;
 			if (GameInstance.GetHealth(PlayerType.User) <= 0 && GameInstance.GetHealth(PlayerType.Opponent) <= 0)
 			{

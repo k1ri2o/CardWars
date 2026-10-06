@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -19,8 +20,24 @@ public static class VersusMatch
 	// A creature stuck "dying" this long is ignored, so a rare stuck death can't freeze the match.
 	private const float StuckDeathSeconds = 6f;
 
+	// How long a pick may wait behind a different message from the friend before it is dropped.
+	private const float StrayPickSeconds = 5f;
+
+	private static float pickMismatchSince = -1f;
+
 	// How long a match decided by surrender or a lost friend may take to reach the result screen.
 	private const float ForcedEndSeconds = 4f;
+
+	// A card effect that hasn't moved on for this long is ignored, so a stuck effect can't freeze the match.
+	private const float StuckEffectSeconds = 12f;
+
+	// Card effects (rare-card pauses, spell and floop sequences) still running, per player.
+	private static readonly int[] effects = new int[2];
+
+	private static readonly float[] effectsChanged = new float[2];
+
+	// When the local player's side last became calm enough for a new move (-1 = not calm).
+	private static float localCalmSince = -1f;
 
 	// True from launching a match until the battle scene is left.
 	public static bool Active;
@@ -164,6 +181,7 @@ public static class VersusMatch
 		PeerLandscapes = null;
 		LocalLandscapesSent = false;
 		LocalFloopPending = false;
+		VersusBanner.Text = null;
 		LocalWinnerSeat = -1;
 		PeerWinnerSeat = -1;
 		ResultShown = false;
@@ -182,6 +200,12 @@ public static class VersusMatch
 			peerAreaMods[j] = 0f;
 		}
 		deathsSince = -1f;
+		for (int k = 0; k < 2; k++)
+		{
+			effects[k] = 0;
+			effectsChanged[k] = 0f;
+		}
+		localCalmSince = -1f;
 		VersusRandom.Seed(seed);
 		Log("match begins: seat " + MySeat + ", seed " + seed + ", quest " + questId + ", first seat " + firstSeat);
 	}
@@ -194,6 +218,7 @@ public static class VersusMatch
 			Log("match ends");
 		}
 		Active = false;
+		VersusBanner.Text = null;
 		PendingLanePick = null;
 		PendingCardPick = null;
 		LocalCardPick = null;
@@ -214,6 +239,11 @@ public static class VersusMatch
 			return;
 		}
 		session.Send(VersusMessage.Join(parts));
+		if (IsTurnMove(parts[0] as string))
+		{
+			// The next move has to wait until this one has fully played out.
+			localCalmSince = -1f;
+		}
 	}
 
 	// ---- Incoming messages ----
@@ -330,9 +360,41 @@ public static class VersusMatch
 	{
 		if (!Active || moves.Count <= 0)
 		{
+			pickMismatchSince = -1f;
 			return;
 		}
 		string[] m = moves.Peek();
+		bool waiting = PendingLanePick != null || PendingCardPick != null;
+		bool matches = (m[0] == "target" && PendingLanePick != null) || (m[0] == "pick" && PendingCardPick != null);
+		if (!waiting || matches)
+		{
+			pickMismatchSince = -1f;
+		}
+		else if (pickMismatchSince < 0f)
+		{
+			pickMismatchSince = Time.realtimeSinceStartup;
+		}
+		else if (Time.realtimeSinceStartup - pickMismatchSince > StrayPickSeconds)
+		{
+			// The friend's game moved on without the pick this game is waiting for: the games disagree.
+			// Give up on the pick so the match can at least be finished.
+			pickMismatchSince = -1f;
+			ReportDesync("waiting for a pick but the friend sent " + m[0]);
+			if (PendingLanePick != null)
+			{
+				CardScript lanePick = PendingLanePick;
+				PendingLanePick = null;
+				lanePick.CancelFloop();
+			}
+			if (PendingCardPick != null)
+			{
+				CardScript cardPick = PendingCardPick;
+				PendingCardPick = null;
+				cardPick.CloseDiscardPile();
+			}
+			VersusBanner.Text = null;
+			return;
+		}
 		if (m[0] == "target" && PendingLanePick != null)
 		{
 			moves.Dequeue();
@@ -398,11 +460,12 @@ public static class VersusMatch
 			deathsSince = -1f;
 			return false;
 		}
+		// Game time, so a paused game (menu, ring) doesn't count toward giving up on a death.
 		if (deathsSince < 0f)
 		{
-			deathsSince = Time.realtimeSinceStartup;
+			deathsSince = Time.time;
 		}
-		if (Time.realtimeSinceStartup - deathsSince > StuckDeathSeconds)
+		if (Time.time - deathsSince > StuckDeathSeconds)
 		{
 			return false;
 		}
@@ -425,17 +488,84 @@ public static class VersusMatch
 		{
 			return false;
 		}
+		if (EffectsRunning(mover))
+		{
+			return false;
+		}
 		return !DeathsPending();
 	}
 
-	// Whether the local player may start a new move now.
-	public static bool LocalInputAllowed()
+	// Runs a card effect coroutine, counting it as running for its owner until it ends, so the
+	// next move waits for it (some cards start two effects, and each ends by setting the phase).
+	public static IEnumerator Track(PlayerType owner, IEnumerator effect)
 	{
-		if (!Active)
+		EffectStarted(owner);
+		try
 		{
-			return true;
+			while (effect.MoveNext())
+			{
+				yield return effect.Current;
+			}
 		}
-		if (Over)
+		finally
+		{
+			EffectEnded(owner);
+		}
+	}
+
+	private static void EffectStarted(PlayerType owner)
+	{
+		if (Active)
+		{
+			effects[(int)owner]++;
+			effectsChanged[(int)owner] = Time.time;
+		}
+	}
+
+	private static void EffectEnded(PlayerType owner)
+	{
+		if (Active && effects[(int)owner] > 0)
+		{
+			effects[(int)owner]--;
+			effectsChanged[(int)owner] = Time.time;
+		}
+	}
+
+	public static bool EffectsRunning(PlayerType owner)
+	{
+		if (effects[(int)owner] <= 0)
+		{
+			return false;
+		}
+		// Game time, so a paused game doesn't count toward giving up on an effect.
+		if (Time.time - effectsChanged[(int)owner] > StuckEffectSeconds)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public static int EffectCount(PlayerType owner)
+	{
+		return effects[(int)owner];
+	}
+
+	// Called every frame during a match: tracks how long the local side has been calm.
+	public static void Tick()
+	{
+		if (!LocalCalmNow())
+		{
+			localCalmSince = -1f;
+		}
+		else if (localCalmSince < 0f)
+		{
+			localCalmSince = Time.realtimeSinceStartup;
+		}
+	}
+
+	private static bool LocalCalmNow()
+	{
+		if (!Active || Over)
 		{
 			return false;
 		}
@@ -450,6 +580,22 @@ public static class VersusMatch
 			return false;
 		}
 		return IsQuiet(PlayerType.User);
+	}
+
+	// Whether the local player may start a new move now.
+	public static bool LocalInputAllowed()
+	{
+		if (!Active)
+		{
+			return true;
+		}
+		if (!LocalCalmNow())
+		{
+			return false;
+		}
+		// Everything has looked settled for a moment, so a brief gap between two steps of
+		// the previous move isn't taken for its end.
+		return localCalmSince >= 0f && Time.realtimeSinceStartup - localCalmSince >= SettleSeconds;
 	}
 
 	// ---- Ring area bonuses ----

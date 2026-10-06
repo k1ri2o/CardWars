@@ -119,6 +119,8 @@ public class VersusSession : MonoBehaviour
 
 	private bool savedStopTutorial;
 
+	private bool savedGlobalStopTutorial;
+
 	private bool savedInputEnabler;
 
 	private bool inputBlocked;
@@ -149,6 +151,14 @@ public class VersusSession : MonoBehaviour
 		get
 		{
 			return connected;
+		}
+	}
+
+	public bool PeerLost
+	{
+		get
+		{
+			return channel != null && channel.PeerLost;
 		}
 	}
 
@@ -217,6 +227,7 @@ public class VersusSession : MonoBehaviour
 
 	public void RobotHost(string name, string code)
 	{
+		lobbyOpen = true;
 		nameText = name;
 		error = string.Empty;
 		StartHosting(code);
@@ -226,6 +237,7 @@ public class VersusSession : MonoBehaviour
 
 	public void RobotJoin(string name, string target)
 	{
+		lobbyOpen = true;
 		nameText = name;
 		error = string.Empty;
 		joinText = target;
@@ -250,6 +262,7 @@ public class VersusSession : MonoBehaviour
 
 	public void RobotRematch()
 	{
+		lobbyOpen = true;
 		error = string.Empty;
 		SendHello();
 	}
@@ -397,6 +410,7 @@ public class VersusSession : MonoBehaviour
 		}
 		if (VersusMatch.Active)
 		{
+			VersusMatch.Tick();
 			VersusMatch.DeliverPicks();
 			WatchConnection(now);
 			VersusMatch.WatchForcedEnd();
@@ -439,7 +453,26 @@ public class VersusSession : MonoBehaviour
 		case "start":
 			if (!VersusMatch.IsHost && m.Length >= 4 && peerHello != null && stage != Stage.InMatch)
 			{
-				LaunchMatch(VersusMessage.UInt(m[1]), m[2], VersusMessage.Int(m[3]));
+				if (iAmReady && LobbyVisible())
+				{
+					LaunchMatch(VersusMessage.UInt(m[1]), m[2], VersusMessage.Int(m[3]));
+				}
+				else
+				{
+					// Not on the lobby screen any more (changing deck): turn the start down.
+					Send("unready");
+				}
+			}
+			break;
+		case "unready":
+			peerReady = false;
+			if (stage == Stage.InMatch && VersusMatch.Active)
+			{
+				VersusMatch.PeerLeft("friend backed out");
+			}
+			else
+			{
+				message = PeerName + " is changing their deck.";
 			}
 			break;
 		case "bye":
@@ -463,7 +496,7 @@ public class VersusSession : MonoBehaviour
 	// The host starts a match once both players have sent their decks.
 	private void TryStart()
 	{
-		if (!VersusMatch.IsHost || !iAmReady || !peerReady || peerHello == null || myHello == null || stage == Stage.InMatch || error.Length > 0)
+		if (!VersusMatch.IsHost || !iAmReady || !peerReady || peerHello == null || myHello == null || stage == Stage.InMatch || error.Length > 0 || !LobbyVisible())
 		{
 			return;
 		}
@@ -492,10 +525,8 @@ public class VersusSession : MonoBehaviour
 		VersusMatch.BeginMatch(VersusMatch.IsHost, seed, questId, firstSeat);
 		VersusMatch.MyName = myHello.Name;
 		VersusMatch.PeerName = peerHello.Name;
-		PlayerInfoScript pinfo = PlayerInfoScript.GetInstance();
-		pinfo.MPPlayerName = myHello.Name;
-		pinfo.MPOpponentName = peerHello.Name;
 		GlobalFlags flags = GlobalFlags.Instance;
+		savedGlobalStopTutorial = flags.stopTutorial;
 		flags.InMPMode = true;
 		flags.BattleResult = null;
 		flags.ReturnToMainMenu = false;
@@ -510,6 +541,11 @@ public class VersusSession : MonoBehaviour
 		iAmReady = false;
 		peerReady = false;
 		lobbyOpen = false;
+		if (inputBlocked)
+		{
+			// Hand input back now, so the quest launcher's own input lock isn't undone next frame.
+			BlockGameInput(false);
+		}
 		error = string.Empty;
 		lastResult = string.Empty;
 		matchesPlayed++;
@@ -550,6 +586,7 @@ public class VersusSession : MonoBehaviour
 		}
 		VersusMatch.EndMatch();
 		GlobalFlags.Instance.InMPMode = false;
+		GlobalFlags.Instance.stopTutorial = savedGlobalStopTutorial;
 		DebugFlagsScript debugFlags = DebugFlagsScript.GetInstance();
 		if (debugFlags != null)
 		{
@@ -1000,14 +1037,25 @@ public class VersusSession : MonoBehaviour
 		GUILayout.Label("You can change your deck before a rematch.", smallStyle);
 		GUILayout.FlexibleSpace();
 		GUILayout.BeginHorizontal();
-		if (channel != null && peerHello != null && !iAmReady && GUILayout.Button("Rematch", buttonStyle, GUILayout.Height(64f)))
+		if (iAmReady)
 		{
-			error = string.Empty;
-			SendHello();
+			if (GUILayout.Button("Cancel rematch", buttonStyle, GUILayout.Height(64f)))
+			{
+				iAmReady = false;
+				Send("unready");
+			}
 		}
-		if (GUILayout.Button("Change deck", buttonStyle, GUILayout.Height(64f)))
+		else
 		{
-			lobbyOpen = false;
+			if (channel != null && peerHello != null && GUILayout.Button("Rematch", buttonStyle, GUILayout.Height(64f)))
+			{
+				error = string.Empty;
+				SendHello();
+			}
+			if (GUILayout.Button("Change deck", buttonStyle, GUILayout.Height(64f)))
+			{
+				lobbyOpen = false;
+			}
 		}
 		if (GUILayout.Button("Leave", buttonStyle, GUILayout.Height(64f)))
 		{

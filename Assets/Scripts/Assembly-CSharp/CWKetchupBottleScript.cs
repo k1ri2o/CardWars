@@ -230,7 +230,14 @@ public class CWKetchupBottleScript : MonoBehaviour
 	{
 		if (GlobalFlags.Instance.InMPMode)
 		{
-			whoGoesFirstLabel.text = string.Format(KFFLocalization.Get("!!FORMAT_PLAYER_GOES_FIRST"), (player != PlayerType.User) ? PlayerInfoScript.GetInstance().MPOpponentName : PlayerInfoScript.GetInstance().MPPlayerName);
+			if (VersusMatch.Active)
+			{
+				whoGoesFirstLabel.text = string.Format(KFFLocalization.Get("!!FORMAT_PLAYER_GOES_FIRST"), (player != PlayerType.User) ? VersusMatch.PeerName : VersusMatch.MyName);
+			}
+			else
+			{
+				whoGoesFirstLabel.text = string.Format(KFFLocalization.Get("!!FORMAT_PLAYER_GOES_FIRST"), (player != PlayerType.User) ? PlayerInfoScript.GetInstance().MPOpponentName : PlayerInfoScript.GetInstance().MPPlayerName);
+			}
 		}
 		else
 		{

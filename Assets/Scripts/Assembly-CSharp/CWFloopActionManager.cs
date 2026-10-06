@@ -214,7 +214,7 @@ public class CWFloopActionManager : MonoBehaviour
 		}
 		string stringFromJson = GetStringFromJson(source.Data.Form.ScriptVizName, "TargetCreatureAnimDelay");
 		float waitTime = ((!(stringFromJson != string.Empty)) ? 0f : float.Parse(stringFromJson));
-		StartCoroutine(DoSequenceSpawnCreature(waitTime, source, targets));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnCreature(waitTime, source, targets)));
 	}
 
 	public void DoEffect(CardScript source, PlayerType player)
@@ -231,7 +231,7 @@ public class CWFloopActionManager : MonoBehaviour
 		{
 			phaseMgr.Phase = ((source.Owner != PlayerType.User) ? BattlePhase.P2SpellHero : BattlePhase.P1SpellHero);
 		}
-		StartCoroutine(DoSequenceSpawnHero(heroFxWaitTime1, heroFxWaitTime2, source, player));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnHero(heroFxWaitTime1, heroFxWaitTime2, source, player)));
 	}
 
 	public void DoEffectNeutral(CardScript source, CardScript[] targets)
@@ -239,13 +239,13 @@ public class CWFloopActionManager : MonoBehaviour
 		BattlePhaseManager.GetInstance().Phase = ((player != (int)PlayerType.User) ? BattlePhase.P2FloopAction : BattlePhase.P1FloopAction);
 		string stringFromJson = GetStringFromJson(source.Data.Form.ScriptVizName, "TargetCreatureAnimDelay");
 		float waitTime = ((!(stringFromJson != string.Empty)) ? 0f : float.Parse(stringFromJson));
-		StartCoroutine(DoSequenceSpawnNeutral(waitTime, source, targets));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnNeutral(waitTime, source, targets)));
 	}
 
 	public void DoEffect(CardScript source, int lane)
 	{
 		BattlePhaseManager.GetInstance().Phase = ((source.Owner != PlayerType.User) ? BattlePhase.P2FloopAction : BattlePhase.P1FloopAction);
-		StartCoroutine(DoSequenceSpawnPersistent(source, lane));
+		StartCoroutine(VersusMatch.Track(source.Owner, DoSequenceSpawnPersistent(source, lane)));
 	}
 
 	private void TriggerSpawnFX(string scriptVizName, GameObject target, string colName, CardScript source)
@@ -850,7 +850,7 @@ public class CWFloopActionManager : MonoBehaviour
 
 	public void TriggerLeader(PlayerType player)
 	{
-		StartCoroutine(DelayTriggerLeader(player));
+		StartCoroutine(VersusMatch.Track(player, DelayTriggerLeader(player)));
 	}
 
 	private IEnumerator DelayTriggerLeader(PlayerType player)

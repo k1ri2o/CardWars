@@ -314,7 +314,7 @@ public class CWPlayerHandsController : MonoBehaviour
 		else
 		{
 			spinStart = false;
-			StartCoroutine(panelMgrBattle.PlaySpellFx(card, player));
+			StartCoroutine(VersusMatch.Track(player, panelMgrBattle.PlaySpellFx(card, player)));
 		}
 	}
 
@@ -390,7 +390,7 @@ public class CWPlayerHandsController : MonoBehaviour
 				component.enabled = true;
 			}
 			cardObj.SetActive(false);
-			StartCoroutine(panelMgrBattle.PlaySpellFx(currentCard, PlayerType.User));
+			StartCoroutine(VersusMatch.Track(PlayerType.User, panelMgrBattle.PlaySpellFx(currentCard, PlayerType.User)));
 			spinStart = false;
 			spinSpeed = 0f;
 			prevSpinSpeed = 0f;

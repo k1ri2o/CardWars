@@ -152,6 +152,8 @@ public class CWBattleSequenceController : MonoBehaviour
 	// 1v1 match: how many spins the ring waits for a tap before counting a miss.
 	private const int VersusRingRounds = 8;
 
+	private const float VersusRingWaitSeconds = 60f;
+
 	private bool versusRingOnly;
 
 	private bool versusCounterView;
@@ -365,8 +367,16 @@ public class CWBattleSequenceController : MonoBehaviour
 		if (peerRing && !VersusMatch.TryTakeRing(turn, lane, out theirs))
 		{
 			VersusBanner.Text = "Waiting for " + VersusMatch.PeerName + "...";
+			float waitStart = Time.realtimeSinceStartup;
 			while (!VersusMatch.Over && !VersusMatch.TryTakeRing(turn, lane, out theirs))
 			{
+				if (Time.realtimeSinceStartup - waitStart > VersusRingWaitSeconds && VersusSession.Instance != null && VersusSession.Instance.IsConnected && !VersusSession.Instance.PeerLost)
+				{
+					// The friend is there but never fought this lane: the games disagree. Count it as a miss.
+					VersusMatch.ReportDesync("no ring from friend for lane " + lane);
+					theirs = "Miss";
+					break;
+				}
 				yield return null;
 			}
 			VersusBanner.Text = null;
