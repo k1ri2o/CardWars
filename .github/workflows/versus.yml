@@ -30,6 +30,15 @@ jobs:
           unzip -q game.zip 'CardWars/game/CardWars_Data/Managed/*' -d release
       - name: Build Assembly-CSharp.dll
         run: versus/build-dll.sh release/CardWars/game/CardWars_Data/Managed Assembly-CSharp.dll
+      # Internet play goes through free public MQTT relays: check that they answer and pass
+      # messages with the game's own code. Informational, so a relay outage doesn't block a build.
+      - name: Check the internet relays
+        continue-on-error: true
+        run: |
+          mkdir relaycheck
+          cp Assembly-CSharp.dll release/CardWars/game/CardWars_Data/Managed/UnityEngine.dll relaycheck/
+          mcs -nologo -out:relaycheck/RelayCheck.exe -r:relaycheck/Assembly-CSharp.dll -r:relaycheck/UnityEngine.dll versus/RelayCheck.cs
+          timeout 240 mono relaycheck/RelayCheck.exe
       - uses: actions/upload-artifact@v4
         with:
           name: CardWars-1v1

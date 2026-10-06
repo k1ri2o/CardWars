@@ -65,3 +65,7 @@ CardWars.exe -versus-join TEST1 -versus-matches 5 -versus-deck random
 Other options: `-versus-broker <host>` (use one MQTT relay), `-versus-name`, `-versus-seed`,
 `-versus-speed <x>`. The game log (`-logFile`) then shows every move, ring result and
 turn checksum, and `OUT OF SYNC` if the two games ever disagree.
+
+`versus/RelayCheck.cs` checks the internet relays: a host and a guest exchange messages
+through each MQTT broker with the game's own link and channel code. The build workflow
+runs it on every push.
