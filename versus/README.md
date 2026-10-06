@@ -19,6 +19,15 @@ It downloads Card Wars 1.12.8 for Windows (about 280 MB) into
 **Card Wars 1v1** shortcut on the desktop. Run it again to update; your progress and decks
 are kept. Both players need the same version.
 
+## Everything unlocked
+
+The first time this build opens a save (a new player or an existing one), it skips the
+tutorial and unlocks everything: 4 copies of every card (the most a deck can hold), every
+hero at level 15 or higher, every quest on the Land of Ooo and Fionna & Cake maps (marked
+with 3 stars, which opens the regions and paths behind them), and every dungeon on every
+day. It happens once per save; cards you sell later are not given back. The code is
+`Assets/Scripts/Assembly-CSharp/Versus/VersusStarterPack.cs`.
+
 ## Play
 
 1. Pick the deck you want in the deck builder.

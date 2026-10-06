@@ -2243,6 +2243,7 @@ public class PlayerInfoScript : MonoBehaviour
 		version = 4;
 		PostDeserializeFixUpQuestProgress();
 		PostDeserializeFixUpTutorialFlow();
+		VersusStarterPack.Apply(this);
 	}
 
 	private void PostDeserializeFixUpQuestProgress()
