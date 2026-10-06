@@ -98,6 +98,9 @@ public static class VersusMatch
 	// The result screen is up (or on its way).
 	public static bool ResultShown;
 
+	// The friend turned the start down, so this match ends without a result.
+	public static bool NoContest;
+
 	private static float forcedAt = -1f;
 
 	private static readonly Queue<string[]> moves = new Queue<string[]>();
@@ -185,6 +188,7 @@ public static class VersusMatch
 		LocalWinnerSeat = -1;
 		PeerWinnerSeat = -1;
 		ResultShown = false;
+		NoContest = false;
 		forcedAt = -1f;
 		moves.Clear();
 		rings.Clear();
@@ -324,6 +328,18 @@ public static class VersusMatch
 
 	// The friend left. If their game had already reached the result, this one ends the same way;
 	// otherwise they forfeit.
+	// The friend never joined this match: leave it without a result.
+	public static void CancelMatch(string why)
+	{
+		if (Over)
+		{
+			return;
+		}
+		Log(why + "; no result");
+		NoContest = true;
+		FinishWithWinner(PlayerType.User);
+	}
+
 	public static void PeerLeft(string why)
 	{
 		if (Over)
@@ -385,6 +401,18 @@ public static class VersusMatch
 				CardScript lanePick = PendingLanePick;
 				PendingLanePick = null;
 				lanePick.CancelFloop();
+				// Nothing will finish the friend's move now, so resume their turn as a finished effect would.
+				CWOpponentActionSequencer sequencer = CWOpponentActionSequencer.GetInstance();
+				if (sequencer != null)
+				{
+					sequencer.resumeFlag = true;
+				}
+				BattlePhaseManager phaseMgr = BattlePhaseManager.GetInstance();
+				if (phaseMgr != null)
+				{
+					phaseMgr.Phase = (!IsMyTurn()) ? BattlePhase.P2Setup : BattlePhase.P1Setup;
+				}
+				UICamera.useInputEnabler = false;
 			}
 			if (PendingCardPick != null)
 			{
@@ -422,6 +450,33 @@ public static class VersusMatch
 				script.CardSelection(card);
 			}
 		}
+	}
+
+	// The friend's game is evidently past this lane: it fought a later lane, or its next turn has begun.
+	public static bool PeerMovedPast(int turn, int lane)
+	{
+		foreach (string[] move in moves)
+		{
+			if (IsTurnMove(move[0]))
+			{
+				return true;
+			}
+		}
+		foreach (int sumTurn in peerSums.Keys)
+		{
+			if (sumTurn > turn)
+			{
+				return true;
+			}
+		}
+		for (int later = lane + 1; later < 4; later++)
+		{
+			if (rings.ContainsKey(turn + ":" + later))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static bool TryTakeRing(int turn, int lane, out string result)

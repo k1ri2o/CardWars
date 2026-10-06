@@ -33,6 +33,9 @@ public class VersusChannel
 
 	private string peerRunId;
 
+	// Run ids of earlier games we talked to; late messages from them are ignored.
+	private readonly List<string> retiredRunIds = new List<string>();
+
 	private int nextSeq = 1;
 
 	private int received;
@@ -100,10 +103,21 @@ public class VersusChannel
 			{
 				continue;
 			}
+			if (retiredRunIds.Contains(parts[1]))
+			{
+				continue;
+			}
 			if (peerRunId != parts[1])
 			{
 				if (peerRunId != null)
 				{
+					if (VersusMatch.Active || now - lastHeard <= LostSeconds)
+					{
+						// Another game in the room, or a stray message: keep talking to the friend we have.
+						// A friend whose game really restarted goes quiet first.
+						continue;
+					}
+					retiredRunIds.Add(peerRunId);
 					// The new run knows nothing of ours, so our numbering starts over too.
 					PeerRestarted = true;
 					unacked.Clear();

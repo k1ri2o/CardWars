@@ -439,9 +439,14 @@ public class VersusSession : MonoBehaviour
 			{
 				error = h.Name + "'s card data is different from yours. Both players need the same game version.";
 			}
-			else if (stage != Stage.InMatch)
+			else
 			{
-				message = h.Name + " is ready.";
+				// A compatible hello (say, after the friend updated) clears an earlier version error.
+				error = string.Empty;
+				if (stage != Stage.InMatch)
+				{
+					message = h.Name + " is ready.";
+				}
 			}
 			if (stage == Stage.Hosting && !iAmReady)
 			{
@@ -468,7 +473,9 @@ public class VersusSession : MonoBehaviour
 			peerReady = false;
 			if (stage == Stage.InMatch && VersusMatch.Active)
 			{
-				VersusMatch.PeerLeft("friend backed out");
+				// Only the lobby sends this, so the friend turned the start down (or cancelled
+				// just as it went out): they never joined this match.
+				VersusMatch.CancelMatch("friend backed out before the match started");
 			}
 			else
 			{
@@ -478,7 +485,14 @@ public class VersusSession : MonoBehaviour
 		case "bye":
 			if (stage == Stage.InMatch && VersusMatch.Active)
 			{
-				VersusMatch.PeerLeft("friend left the match");
+				if (VersusMatch.PeerLandscapes == null)
+				{
+					VersusMatch.CancelMatch("friend left before the match started");
+				}
+				else
+				{
+					VersusMatch.PeerLeft("friend left the match");
+				}
 			}
 			message = PeerName + " left.";
 			peerReady = false;
@@ -564,7 +578,11 @@ public class VersusSession : MonoBehaviour
 		{
 			return;
 		}
-		if (winner == null)
+		if (VersusMatch.NoContest)
+		{
+			Instance.lastResult = Instance.PeerName + " backed out before the match started.";
+		}
+		else if (winner == null)
 		{
 			Instance.lastResult = "You left the match.";
 		}

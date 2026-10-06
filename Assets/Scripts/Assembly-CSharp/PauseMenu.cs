@@ -22,7 +22,11 @@ public class PauseMenu : MonoBehaviour
 	{
 		pauseMenuShown = true;
 		savedTimeScale = Time.timeScale;
-		Time.timeScale = 0f;
+		// A 1v1 match can't be paused: the friend's game keeps going, so this one does too.
+		if (!VersusMatch.Active)
+		{
+			Time.timeScale = 0f;
+		}
 		bool flag = TutorialManager.Instance.isTutorialCompleted(TutorialTrigger.Won) || DebugFlagsScript.GetInstance().stopTutorial;
 		if (messageLabel != null)
 		{
@@ -44,7 +48,10 @@ public class PauseMenu : MonoBehaviour
 
 	private void PauseMenuDone()
 	{
-		Time.timeScale = savedTimeScale;
+		if (!VersusMatch.Active)
+		{
+			Time.timeScale = savedTimeScale;
+		}
 		pauseMenuShown = false;
 	}
 

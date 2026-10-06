@@ -152,7 +152,12 @@ public class CWBattleSequenceController : MonoBehaviour
 	// 1v1 match: how many spins the ring waits for a tap before counting a miss.
 	private const int VersusRingRounds = 8;
 
-	private const float VersusRingWaitSeconds = 60f;
+	// How long a reachable friend may take to send their ring tap before the lane is fought
+	// without it (their ring times out by itself within seconds, so this only catches a stuck game).
+	private const float VersusRingWaitSeconds = 180f;
+
+	// How long to wait for a ring tap the friend's game has evidently skipped (it is already past this lane).
+	private const float VersusRingSkippedSeconds = 5f;
 
 	private bool versusRingOnly;
 
@@ -321,7 +326,7 @@ public class CWBattleSequenceController : MonoBehaviour
 		{
 			yield return null;
 		}
-		if (VersusMatch.Over || !GameInstance.LaneHasCreature(player, lane))
+		if (VersusMatch.Over || GameInstance.GetHealth(PlayerType.User) <= 0 || GameInstance.GetHealth(PlayerType.Opponent) <= 0 || !GameInstance.LaneHasCreature(player, lane))
 		{
 			yield break;
 		}
@@ -367,12 +372,28 @@ public class CWBattleSequenceController : MonoBehaviour
 		if (peerRing && !VersusMatch.TryTakeRing(turn, lane, out theirs))
 		{
 			VersusBanner.Text = "Waiting for " + VersusMatch.PeerName + "...";
-			float waitStart = Time.realtimeSinceStartup;
+			float reachableSince = Time.realtimeSinceStartup;
+			float skippedSince = -1f;
 			while (!VersusMatch.Over && !VersusMatch.TryTakeRing(turn, lane, out theirs))
 			{
-				if (Time.realtimeSinceStartup - waitStart > VersusRingWaitSeconds && VersusSession.Instance != null && VersusSession.Instance.IsConnected && !VersusSession.Instance.PeerLost)
+				float now = Time.realtimeSinceStartup;
+				VersusSession session = VersusSession.Instance;
+				if (session == null || !session.IsConnected || session.PeerLost)
 				{
-					// The friend is there but never fought this lane: the games disagree. Count it as a miss.
+					// Only time the friend could have answered counts.
+					reachableSince = now;
+				}
+				if (!VersusMatch.PeerMovedPast(turn, lane))
+				{
+					skippedSince = -1f;
+				}
+				else if (skippedSince < 0f)
+				{
+					skippedSince = now;
+				}
+				if ((skippedSince >= 0f && now - skippedSince > VersusRingSkippedSeconds) || now - reachableSince > VersusRingWaitSeconds)
+				{
+					// The friend's game never fought this lane: the games disagree. Count it as a miss.
 					VersusMatch.ReportDesync("no ring from friend for lane " + lane);
 					theirs = "Miss";
 					break;
@@ -458,7 +479,7 @@ public class CWBattleSequenceController : MonoBehaviour
 				break;
 			}
 			yield return 0;
-			if (round == roundLimit)
+			if (round == roundLimit || (VersusMatch.Active && timeOutFlag))
 			{
 				yield return StartCoroutine(StopRing());
 			}

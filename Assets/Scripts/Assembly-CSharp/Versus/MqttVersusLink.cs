@@ -35,12 +35,27 @@ public class MqttVersusLink : VersusLink
 	{
 		this.broker = broker;
 		this.port = port;
-		string root = "cardwars-1v1/" + room + "/";
+		// The topic is named after a hash of the room code, so the code itself never shows on the relay.
+		string root = "cardwars-1v1/" + RoomHash(room) + "/";
 		inTopic = root + ((!isHost) ? "to-guest" : "to-host");
 		outTopic = root + ((!isHost) ? "to-host" : "to-guest");
 		clientId = "cw1v1-" + Guid.NewGuid().ToString("N").Substring(0, 16);
 		StartThread("VersusMqtt", Run);
 		StartThread("VersusMqttPing", PingLoop);
+	}
+
+	private static string RoomHash(string room)
+	{
+		using (System.Security.Cryptography.SHA1 sha = System.Security.Cryptography.SHA1.Create())
+		{
+			byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes("cardwars-1v1:" + room.ToUpperInvariant()));
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < 10; i++)
+			{
+				sb.Append(hash[i].ToString("x2"));
+			}
+			return sb.ToString();
+		}
 	}
 
 	private void Run()
@@ -51,13 +66,20 @@ public class MqttVersusLink : VersusLink
 			{
 				SetState(LinkState.Connecting, "connecting to " + broker);
 				TcpClient c = new TcpClient();
-				IAsyncResult ar = c.BeginConnect(broker, port, null, null);
-				if (!ar.AsyncWaitHandle.WaitOne(8000, false))
+				try
+				{
+					IAsyncResult ar = c.BeginConnect(broker, port, null, null);
+					if (!ar.AsyncWaitHandle.WaitOne(8000, false))
+					{
+						throw new IOException("no answer from " + broker);
+					}
+					c.EndConnect(ar);
+				}
+				catch (Exception)
 				{
 					c.Close();
-					throw new IOException("no answer from " + broker);
+					throw;
 				}
-				c.EndConnect(ar);
 				c.NoDelay = true;
 				c.SendTimeout = 5000;
 				NetworkStream s = c.GetStream();

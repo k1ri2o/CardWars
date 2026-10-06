@@ -208,27 +208,58 @@ public class TcpVersusLink : VersusLink
 
 	private TcpClient AcceptOne()
 	{
-		if (listener == null)
+		TcpListener l;
+		lock (sync)
 		{
-			listener = new TcpListener(IPAddress.Any, port);
-			listener.Start();
+			l = listener;
+		}
+		if (l == null)
+		{
+			l = new TcpListener(IPAddress.Any, port);
+			try
+			{
+				l.Start();
+			}
+			catch (Exception ex)
+			{
+				// The port is taken (another copy of the game?): try again in a while.
+				SetState(LinkState.Connecting, "port " + port + " is busy: " + ex.Message);
+				Nap(2000);
+				return null;
+			}
+			lock (sync)
+			{
+				if (closing)
+				{
+					l.Stop();
+					return null;
+				}
+				listener = l;
+			}
 			SetState(LinkState.Connecting, "waiting for the other player on port " + port);
 		}
-		return listener.AcceptTcpClient();
+		return l.AcceptTcpClient();
 	}
 
 	private TcpClient ConnectOnce()
 	{
 		SetState(LinkState.Connecting, "connecting to " + address + ":" + port);
 		TcpClient c = new TcpClient();
-		IAsyncResult ar = c.BeginConnect(address, port, null, null);
-		if (!ar.AsyncWaitHandle.WaitOne(5000, false))
+		try
+		{
+			IAsyncResult ar = c.BeginConnect(address, port, null, null);
+			if (!ar.AsyncWaitHandle.WaitOne(5000, false))
+			{
+				throw new IOException("no answer from " + address + ":" + port);
+			}
+			c.EndConnect(ar);
+			return c;
+		}
+		catch (Exception)
 		{
 			c.Close();
-			throw new IOException("no answer from " + address + ":" + port);
+			throw;
 		}
-		c.EndConnect(ar);
-		return c;
 	}
 
 	private void ReadLines(Stream s)
@@ -298,11 +329,17 @@ public class TcpVersusLink : VersusLink
 	{
 		base.Close();
 		DropClient();
-		if (listener != null)
+		TcpListener l;
+		lock (sync)
+		{
+			l = listener;
+			listener = null;
+		}
+		if (l != null)
 		{
 			try
 			{
-				listener.Stop();
+				l.Stop();
 			}
 			catch (Exception)
 			{
