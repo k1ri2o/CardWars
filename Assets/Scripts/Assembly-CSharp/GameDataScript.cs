@@ -140,6 +140,7 @@ public class GameDataScript : MonoBehaviour
 				localWins = VersusMatch.LocalWinsTie();
 			}
 			VersusMatch.Log("game over, " + (localWins ? "won" : "lost"));
+			VersusMatch.LocalResult(localWins);
 			phaseMgr.Phase = (!localWins) ? BattlePhase.Result_P1Defeated : BattlePhase.Result_P2Defeated;
 			return;
 		}

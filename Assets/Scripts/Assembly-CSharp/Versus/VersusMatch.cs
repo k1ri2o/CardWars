@@ -70,6 +70,14 @@ public static class VersusMatch
 
 	public static bool LocalLandscapesSent;
 
+	// The local player started a floop whose effect hasn't begun yet.
+	public static bool LocalFloopPending;
+
+	// Seat of the winner as decided on this computer and on the friend's (-1 = not yet).
+	public static int LocalWinnerSeat = -1;
+
+	public static int PeerWinnerSeat = -1;
+
 	// The result screen is up (or on its way).
 	public static bool ResultShown;
 
@@ -155,6 +163,9 @@ public static class VersusMatch
 		LocalCardPick = null;
 		PeerLandscapes = null;
 		LocalLandscapesSent = false;
+		LocalFloopPending = false;
+		LocalWinnerSeat = -1;
+		PeerWinnerSeat = -1;
 		ResultShown = false;
 		forcedAt = -1f;
 		moves.Clear();
@@ -191,7 +202,7 @@ public static class VersusMatch
 
 	public static void Log(string message)
 	{
-		Debug.Log("[Versus] " + message);
+		UnityEngine.Debug.Log("[Versus] " + message);
 	}
 
 	public static void Send(params object[] parts)
@@ -252,7 +263,51 @@ public static class VersusMatch
 			PeerSurrendered = true;
 			FinishWithWinner(PlayerType.User);
 			break;
+		case "over":
+			if (m.Length >= 2)
+			{
+				PeerWinnerSeat = VersusMessage.Int(m[1]);
+				Log("friend's game ended: seat " + PeerWinnerSeat + " won");
+				if (LocalWinnerSeat >= 0 && LocalWinnerSeat != PeerWinnerSeat)
+				{
+					ReportDesync("the two games disagree on who won");
+				}
+			}
+			break;
 		}
+	}
+
+	// The battle reached its result here: tell the friend's game, which may still be playing it out.
+	public static void LocalResult(bool localWins)
+	{
+		if (LocalWinnerSeat >= 0)
+		{
+			return;
+		}
+		LocalWinnerSeat = localWins ? MySeat : (1 - MySeat);
+		Send("over", LocalWinnerSeat);
+		if (PeerWinnerSeat >= 0 && PeerWinnerSeat != LocalWinnerSeat)
+		{
+			ReportDesync("the two games disagree on who won");
+		}
+	}
+
+	// The friend left. If their game had already reached the result, this one ends the same way;
+	// otherwise they forfeit.
+	public static void PeerLeft(string why)
+	{
+		if (Over)
+		{
+			return;
+		}
+		if (PeerWinnerSeat >= 0)
+		{
+			Log(why + " after the match ended; finishing it the same way here");
+			FinishWithWinner(PlayerOfSeat(PeerWinnerSeat));
+			return;
+		}
+		Log(why + "; the match is yours");
+		FinishWithWinner(PlayerType.User);
 	}
 
 	public static string[] PeekMove()
@@ -363,6 +418,10 @@ public static class VersusMatch
 			return false;
 		}
 		if (PendingLanePick != null || PendingCardPick != null || LocalCardPick != null)
+		{
+			return false;
+		}
+		if (mover == PlayerType.User && LocalFloopPending)
 		{
 			return false;
 		}
@@ -588,7 +647,7 @@ public static class VersusMatch
 			Desynced = true;
 			DesyncInfo = info;
 		}
-		Debug.LogWarning("[Versus] OUT OF SYNC: " + info);
+		UnityEngine.Debug.LogWarning("[Versus] OUT OF SYNC: " + info);
 	}
 
 	public static string StateChecksum()

@@ -442,7 +442,7 @@ public class CWBattleSequenceController : MonoBehaviour
 	{
 		while (!_keyPressed)
 		{
-			if (Input.GetMouseButtonDown(0))
+			if (Input.GetMouseButtonDown(0) || VersusRobot.WantsRingTap(currentAngle, hitAreaStart, hitAreaEnd, critAreaStart, critAreaEnd))
 			{
 				yield return StartCoroutine(StopRing());
 				break;

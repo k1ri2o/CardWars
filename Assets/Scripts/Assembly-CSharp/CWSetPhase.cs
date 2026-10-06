@@ -18,7 +18,8 @@ public class CWSetPhase : MonoBehaviour
 	{
 		if (VersusMatch.Active && (setPhase == BattlePhase.P1SetupBanner || setPhase == BattlePhase.P2SetupBanner) && GameDataScript.GetInstance().Turn <= 1)
 		{
-			StartCoroutine(VersusStart());
+			// Runs on the phase manager: this button hides itself (and would stop the wait) once tapped.
+			phaseMgr.StartCoroutine(VersusStart());
 			return;
 		}
 		phaseMgr.SetPhase(delay, setPhase);

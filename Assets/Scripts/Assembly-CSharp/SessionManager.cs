@@ -117,6 +117,7 @@ public class SessionManager : MonoBehaviour
 
 	private void Awake()
 	{
+		VersusRobot.Boot();
 		if (instance == null)
 		{
 			instance = this;

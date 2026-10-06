@@ -1857,6 +1857,23 @@ public class GameState
 		LandscapeManager.UnhighlightLandscape(player, lane);
 	}
 
+	// The card waiting for a lane pick, and on which side (read by the 1v1 test robot).
+	public CardScript CurrentTargetingListener
+	{
+		get
+		{
+			return TargetingListener;
+		}
+	}
+
+	public PlayerType CurrentSelectionSide
+	{
+		get
+		{
+			return SelectionSide;
+		}
+	}
+
 	public void SetTargetingListener(PlayerType side, CardScript script)
 	{
 		SelectionSide = side;

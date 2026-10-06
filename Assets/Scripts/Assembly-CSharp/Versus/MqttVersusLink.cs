@@ -9,7 +9,7 @@ using System.Text;
 // over TCP port 1883 (the game's Mono runtime is too old for modern TLS).
 public class MqttVersusLink : VersusLink
 {
-	public static readonly string[] Brokers = new string[3] { "broker.emqx.io", "broker.hivemq.com", "test.mosquitto.org" };
+	public static string[] Brokers = new string[3] { "broker.emqx.io", "broker.hivemq.com", "test.mosquitto.org" };
 
 	public const int DefaultPort = 1883;
 

@@ -235,6 +235,21 @@ public class CWTBDragToMove : MonoBehaviour
 		}
 	}
 
+	// The 1v1 test robot plays this hand card the way a drag onto a lane does.
+	public bool RobotPlay(CardItem card, int lane)
+	{
+		if (tapScript == null || tapScript.card != card || !card.Form.CanPlay(PlayerType.User, lane) || !handCtlr.CanPlay())
+		{
+			return false;
+		}
+		panelMgrBattle.currentCardObj = base.gameObject;
+		handCtlr.card = card;
+		handCtlr.cardName = card.Form.Name;
+		handCtlr.lane = lane;
+		handCtlr.PlayCard(lane, card);
+		return true;
+	}
+
 	public void ReleaseCard(Vector2 gesturePos)
 	{
 		cardRootDragging = false;

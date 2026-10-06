@@ -119,10 +119,12 @@ public class CWFloopActionManager : MonoBehaviour
 	{
 		if (VersusMatch.Active && player == (int)PlayerType.User)
 		{
-			if (VersusMatch.Over || !GameInstance.LaneHasCreature(PlayerType.User, lane))
+			if (VersusMatch.Over || !GameInstance.LaneHasCreature(PlayerType.User, lane) || !VersusMatch.LocalInputAllowed())
 			{
 				yield break;
 			}
+			// Nothing else may start until this floop has begun (see DoWaitThenTrigger).
+			VersusMatch.LocalFloopPending = true;
 			VersusMatch.Send("floop", lane);
 		}
 		GameObject target = creatureMgr.Spawn_Points[player, lane, 0].gameObject;
@@ -153,6 +155,10 @@ public class CWFloopActionManager : MonoBehaviour
 		FloopFX();
 		yield return new WaitForSeconds(waitTime);
 		GameInstance.FloopCard(floopPlayer, floopLane, CardType.Creature);
+		if (floopPlayer == (int)PlayerType.User)
+		{
+			VersusMatch.LocalFloopPending = false;
+		}
 	}
 
 	private void FloopFX()

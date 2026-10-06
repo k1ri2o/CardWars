@@ -141,6 +141,9 @@ public class VersusSession : MonoBehaviour
 
 	public static VersusSession Instance { get; private set; }
 
+	// A deck the test robot plays instead of the selected one (see VersusRobot).
+	public static Deck RobotDeck;
+
 	public bool IsConnected
 	{
 		get
@@ -210,12 +213,53 @@ public class VersusSession : MonoBehaviour
 		}
 	}
 
+	// ---- Test robot (see VersusRobot) ----
+
+	public void RobotHost(string name, string code)
+	{
+		nameText = name;
+		error = string.Empty;
+		StartHosting(code);
+		VersusMatch.Log("hosting room " + roomCode);
+		SendHello();
+	}
+
+	public void RobotJoin(string name, string target)
+	{
+		nameText = name;
+		error = string.Empty;
+		joinText = target;
+		StartJoining(target);
+	}
+
+	public bool RobotAfterMatch
+	{
+		get
+		{
+			return stage == Stage.AfterMatch;
+		}
+	}
+
+	public bool RobotCanRematch
+	{
+		get
+		{
+			return channel != null && peerHello != null && !iAmReady;
+		}
+	}
+
+	public void RobotRematch()
+	{
+		error = string.Empty;
+		SendHello();
+	}
+
 	// ---- Connecting ----
 
-	private void StartHosting()
+	private void StartHosting(string fixedCode)
 	{
 		Disconnect(true);
-		roomCode = NewRoomCode();
+		roomCode = string.IsNullOrEmpty(fixedCode) ? NewRoomCode() : fixedCode.ToUpper(System.Globalization.CultureInfo.InvariantCulture);
 		List<VersusLink> links = new List<VersusLink>();
 		try
 		{
@@ -399,10 +443,9 @@ public class VersusSession : MonoBehaviour
 			}
 			break;
 		case "bye":
-			if (stage == Stage.InMatch && VersusMatch.Active && !VersusMatch.Over)
+			if (stage == Stage.InMatch && VersusMatch.Active)
 			{
-				VersusMatch.Log("friend left the match");
-				VersusMatch.FinishWithWinner(PlayerType.User);
+				VersusMatch.PeerLeft("friend left the match");
 			}
 			message = PeerName + " left.";
 			peerReady = false;
@@ -514,15 +557,16 @@ public class VersusSession : MonoBehaviour
 		}
 		stage = (channel == null) ? Stage.Menu : Stage.AfterMatch;
 		lobbyOpen = true;
+		VersusRobot.MatchEnded();
 		message = string.Empty;
 	}
 
 	private void OnPeerRestarted()
 	{
 		VersusMatch.Log("friend's game restarted");
-		if (stage == Stage.InMatch && VersusMatch.Active && !VersusMatch.Over)
+		if (stage == Stage.InMatch && VersusMatch.Active)
 		{
-			VersusMatch.FinishWithWinner(PlayerType.User);
+			VersusMatch.PeerLeft("friend's game restarted");
 		}
 		peerHello = null;
 		peerReady = false;
@@ -551,8 +595,7 @@ public class VersusSession : MonoBehaviour
 		}
 		if (now - lostSince > ForfeitSeconds)
 		{
-			VersusMatch.Log("friend gone too long; match awarded");
-			VersusMatch.FinishWithWinner(PlayerType.User);
+			VersusMatch.PeerLeft("friend gone too long");
 		}
 	}
 
@@ -575,7 +618,7 @@ public class VersusSession : MonoBehaviour
 		{
 			return null;
 		}
-		Deck deck = pinfo.GetSelectedDeckCopy();
+		Deck deck = (RobotDeck != null) ? RobotDeck : pinfo.GetSelectedDeckCopy();
 		if (deck == null || deck.Leader == null || deck.CardCount() == 0)
 		{
 			return null;
@@ -874,7 +917,7 @@ public class VersusSession : MonoBehaviour
 		if (GUILayout.Button("Host a match", buttonStyle, GUILayout.Height(64f)))
 		{
 			error = string.Empty;
-			StartHosting();
+			StartHosting(null);
 			SendHello();
 		}
 		GUILayout.Space(10f);
