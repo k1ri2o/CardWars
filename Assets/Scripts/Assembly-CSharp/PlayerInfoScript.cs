@@ -101,6 +101,8 @@ public class PlayerInfoScript : MonoBehaviour
 
 	public int DeckID;
 
+	private const int UnlimitedCurrency = 999999999;
+
 	private string mCoins;
 
 	private string mCoinsAccumulated;
@@ -407,20 +409,15 @@ public class PlayerInfoScript : MonoBehaviour
 	{
 		get
 		{
-			return decryptValue(mCoins);
+			return UnlimitedCurrency;
 		}
 		set
 		{
-			value = Math.Max(0, value);
-			int num = decryptValue(mCoins);
-			int num2 = value - num;
-			int num3 = decryptValue(mCoinsAccumulated);
-			if (num2 > 0)
+			mCoins = encryptValue(UnlimitedCurrency);
+			if (decryptValue(mCoinsAccumulated) < UnlimitedCurrency)
 			{
-				num3 += num2;
-				mCoinsAccumulated = encryptValue(num3);
+				mCoinsAccumulated = encryptValue(UnlimitedCurrency);
 			}
-			mCoins = encryptValue(value);
 		}
 	}
 
@@ -428,19 +425,15 @@ public class PlayerInfoScript : MonoBehaviour
 	{
 		get
 		{
-			return decryptValue(mGemStr);
+			return UnlimitedCurrency;
 		}
 		set
 		{
-			int num = decryptValue(mGemStr);
-			int num2 = value - num;
-			int num3 = decryptValue(mGemsAccumulated);
-			if (num2 > 0)
+			mGemStr = encryptValue(UnlimitedCurrency);
+			if (decryptValue(mGemsAccumulated) < UnlimitedCurrency)
 			{
-				num3 += num2;
-				mGemsAccumulated = encryptValue(num3);
+				mGemsAccumulated = encryptValue(UnlimitedCurrency);
 			}
-			mGemStr = encryptValue(value);
 		}
 	}
 
@@ -1831,10 +1824,10 @@ public class PlayerInfoScript : MonoBehaviour
 			UsePresetDeck = TFUtils.LoadBoolAsInt(dictionary, "UsePresetDeck", false);
 			Tutorial = TFUtils.LoadBoolAsInt(dictionary, "Tutorial", false);
 			DeckID = TFUtils.LoadInt(dictionary, "DeckID", 0);
-			mCoins = encryptValue(TFUtils.LoadInt(dictionary, "Coins", ParametersManager.Instance.New_Player_Coins));
-			mGemStr = encryptValue(TFUtils.LoadInt(dictionary, "Gems", ParametersManager.Instance.New_Player_Gems));
-			mCoinsAccumulated = encryptValue(TFUtils.LoadInt(dictionary, "CoinsAccumulated", 0));
-			mGemsAccumulated = encryptValue(TFUtils.LoadInt(dictionary, "GemsAccumulated", 0));
+			mCoins = encryptValue(UnlimitedCurrency);
+			mGemStr = encryptValue(UnlimitedCurrency);
+			mCoinsAccumulated = encryptValue(Math.Max(UnlimitedCurrency, TFUtils.LoadInt(dictionary, "CoinsAccumulated", 0)));
+			mGemsAccumulated = encryptValue(Math.Max(UnlimitedCurrency, TFUtils.LoadInt(dictionary, "GemsAccumulated", 0)));
 			mCurrentQuestIDs["main"] = TFUtils.LoadInt(dictionary, "CurrentQuest", QuestManager.Instance.GetFirstQuestID("main"));
 			mLastClearedQuestIDs["main"] = TFUtils.LoadInt(dictionary, "LastClearedQuest", 0);
 			NumMPGamesPlayed = TFUtils.LoadInt(dictionary, "NumMPGamesPlayed", 0);
