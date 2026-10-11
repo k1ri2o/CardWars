@@ -17,11 +17,11 @@ public class DetectCheater : MonoBehaviour
 		{
 			cheater = true;
 		}
-		if (instance.Gems >= 1000000)
+		if (instance.Gems >= int.MaxValue)
 		{
 			cheater = true;
 		}
-		if (instance.Coins >= 1000000)
+		if (instance.Coins >= int.MaxValue)
 		{
 			cheater = true;
 		}
